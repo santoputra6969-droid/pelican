@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, signSession } from "@/lib/auth";
 import { requireAdmin } from "@/lib/session";
+import { formatRupiah } from "@/lib/format";
 
 const ADMIN_COOKIE_OPTS = {
   httpOnly: true,
@@ -16,6 +17,8 @@ const ADMIN_COOKIE_OPTS = {
 };
 
 export type LoginState = { error: string } | null;
+
+export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
 
 export async function adminLogin(
   _prev: LoginState,
@@ -56,16 +59,20 @@ export async function adminLogout() {
 
 /* --------------------------------- IPL ---------------------------------- */
 
-export async function setIplAmount(formData: FormData) {
+export async function setIplAmount(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const amount = Number(formData.get("amount") ?? 0);
-  if (!Number.isFinite(amount) || amount < 0) return;
+  if (!Number.isFinite(amount) || amount < 0)
+    return { ok: false, message: "Nominal tidak valid." };
   await prisma.house.updateMany({ data: { iplAmount: amount } });
   void admin;
   revalidatePath("/admin/ipl");
+  return { ok: true, message: `Nominal IPL disimpan: ${formatRupiah(amount)}.` };
 }
 
-export async function setIplAmountForHouses(formData: FormData) {
+export async function setIplAmountForHouses(
+  formData: FormData
+): Promise<ActionResult> {
   const admin = await requireAdmin();
   const amount = Number(formData.get("amount") ?? 0);
   const ids = String(formData.get("houseIds") ?? "")
@@ -73,7 +80,8 @@ export async function setIplAmountForHouses(formData: FormData) {
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isInteger(n) && n > 0);
 
-  if (!Number.isFinite(amount) || amount < 0 || ids.length === 0) return;
+  if (!Number.isFinite(amount) || amount < 0 || ids.length === 0)
+    return { ok: false, message: "Pilih rumah & isi nominal yang valid." };
 
   await prisma.house.updateMany({
     where: { id: { in: ids } },
@@ -82,12 +90,17 @@ export async function setIplAmountForHouses(formData: FormData) {
   void admin;
   revalidatePath("/admin/ipl");
   revalidatePath("/admin");
+  return {
+    ok: true,
+    message: `Nominal diterapkan ke ${ids.length} rumah.`,
+  };
 }
 
-export async function generateBills(formData: FormData) {
+export async function generateBills(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const period = String(formData.get("period") ?? "").trim(); // YYYY-MM
-  if (!/^\d{4}-\d{2}$/.test(period)) return;
+  if (!/^\d{4}-\d{2}$/.test(period))
+    return { ok: false, message: "Periode tidak valid." };
   const [year, month] = period.split("-").map(Number);
 
   const houses = await prisma.house.findMany({ where: { payIpl: true } });
@@ -108,11 +121,15 @@ export async function generateBills(formData: FormData) {
   }
   revalidatePath("/admin/ipl");
   revalidatePath("/admin");
+  return {
+    ok: true,
+    message: `Tagihan diterbitkan untuk ${houses.length} rumah.`,
+  };
 }
 
 /* ----------------------------- Transactions ----------------------------- */
 
-export async function createTransaction(formData: FormData) {
+export async function createTransaction(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const kind = String(formData.get("kind") ?? "KELUAR"); // MASUK | KELUAR
   const category = String(formData.get("category") ?? "UTAMA") === "PKK" ? "PKK" : "UTAMA";
@@ -120,7 +137,8 @@ export async function createTransaction(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const amount = Math.round(Number(formData.get("amount") ?? 0));
 
-  if (!type || !Number.isFinite(amount) || amount <= 0) return;
+  if (!type || !Number.isFinite(amount) || amount <= 0)
+    return { ok: false, message: "Jenis & nominal transaksi wajib diisi." };
 
   const mutation = kind === "MASUK" ? "DEBIT" : "KREDIT";
   const delta = mutation === "DEBIT" ? amount : -amount;
@@ -161,11 +179,15 @@ export async function createTransaction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/transaksi");
   revalidatePath("/");
+  return {
+    ok: true,
+    message: `Transaksi ${kind === "MASUK" ? "pemasukan" : "pengeluaran"} dicatat: ${formatRupiah(amount)}.`,
+  };
 }
 
 /* ------------------------------ Information ------------------------------ */
 
-export async function saveInformation(formData: FormData) {
+export async function saveInformation(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
@@ -173,7 +195,8 @@ export async function saveInformation(formData: FormData) {
   const image = String(formData.get("image") ?? "").trim() || null;
   const isPin = formData.get("isPin") === "on";
   const published = formData.get("published") === "on";
-  if (!title || !content) return;
+  if (!title || !content)
+    return { ok: false, message: "Judul & isi wajib diisi." };
 
   if (id) {
     await prisma.information.update({
@@ -188,24 +211,26 @@ export async function saveInformation(formData: FormData) {
   revalidatePath("/admin/informasi");
   revalidatePath("/informasi");
   revalidatePath("/");
+  return { ok: true, message: id ? "Informasi diperbarui." : "Informasi ditambahkan." };
 }
 
-export async function deleteInformation(formData: FormData) {
+export async function deleteInformation(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (id) await prisma.information.delete({ where: { id } });
   revalidatePath("/admin/informasi");
   revalidatePath("/informasi");
+  return { ok: true, message: "Informasi dihapus." };
 }
 
 /* -------------------------------- Banner -------------------------------- */
 
-export async function saveBanner(formData: FormData) {
+export async function saveBanner(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
   const image = String(formData.get("image") ?? "").trim();
   const active = formData.get("active") === "on";
-  if (!image) return;
+  if (!image) return { ok: false, message: "URL gambar wajib diisi." };
 
   if (id) {
     await prisma.banner.update({
@@ -220,19 +245,21 @@ export async function saveBanner(formData: FormData) {
   }
   revalidatePath("/admin/banner");
   revalidatePath("/");
+  return { ok: true, message: id ? "Banner diperbarui." : "Banner ditambahkan." };
 }
 
-export async function deleteBanner(formData: FormData) {
+export async function deleteBanner(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
   if (id) await prisma.banner.delete({ where: { id } });
   revalidatePath("/admin/banner");
   revalidatePath("/");
+  return { ok: true, message: "Banner dihapus." };
 }
 
 /* --------------------------------- House -------------------------------- */
 
-export async function saveHouse(formData: FormData) {
+export async function saveHouse(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
   const block = String(formData.get("block") ?? "").trim();
@@ -242,7 +269,8 @@ export async function saveHouse(formData: FormData) {
   const occupiedByOwner = formData.get("occupiedByOwner") === "on";
   const payIpl = formData.get("payIpl") === "on";
   const iplAmount = Number(formData.get("iplAmount") ?? 252000);
-  if (!block || !no) return;
+  if (!block || !no)
+    return { ok: false, message: "Blok & nomor rumah wajib diisi." };
 
   const data = {
     block,
@@ -259,23 +287,25 @@ export async function saveHouse(formData: FormData) {
     await prisma.house.create({ data });
   }
   revalidatePath("/admin/warga");
+  return { ok: true, message: id ? "Data rumah diperbarui." : "Rumah baru ditambahkan." };
 }
 
-export async function deleteHouse(formData: FormData) {
+export async function deleteHouse(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
   if (id) await prisma.house.delete({ where: { id } });
   revalidatePath("/admin/warga");
+  return { ok: true, message: "Rumah dihapus." };
 }
 
 /* ------------------------------ Pengaduan ------------------------------- */
 
 const COMPLAINT_STATUSES = ["BARU", "DIPROSES", "SELESAI"];
 
-export async function updateComplaint(formData: FormData) {
+export async function updateComplaint(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
-  if (!id) return;
+  if (!id) return { ok: false, message: "Pengaduan tidak ditemukan." };
 
   const rawStatus = String(formData.get("status") ?? "").toUpperCase();
   const status = COMPLAINT_STATUSES.includes(rawStatus) ? rawStatus : "BARU";
@@ -293,13 +323,15 @@ export async function updateComplaint(formData: FormData) {
   revalidatePath("/admin/pengaduan");
   revalidatePath("/admin");
   revalidatePath("/pengaduan");
+  return { ok: true, message: "Pengaduan diperbarui." };
 }
 
-export async function deleteComplaint(formData: FormData) {
+export async function deleteComplaint(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
   if (id) await prisma.complaint.delete({ where: { id } });
   revalidatePath("/admin/pengaduan");
   revalidatePath("/admin");
+  return { ok: true, message: "Pengaduan dihapus." };
 }
 

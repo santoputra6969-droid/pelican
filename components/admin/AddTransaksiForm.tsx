@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { createTransaction } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 
 type Kind = "KELUAR" | "MASUK";
 type Category = "UTAMA" | "PKK";
@@ -28,11 +29,9 @@ export function AddTransaksiForm() {
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Catat Transaksi">
-        <form
-          action={async (formData) => {
-            await createTransaction(formData);
-            setOpen(false);
-          }}
+        <ActionForm
+          action={createTransaction}
+          onSuccess={() => setOpen(false)}
           className="space-y-4"
         >
           <input type="hidden" name="kind" value={kind} />
@@ -142,7 +141,7 @@ export function AddTransaksiForm() {
           </div>
 
           <SubmitButton kind={kind} />
-        </form>
+        </ActionForm>
       </Modal>
     </>
   );

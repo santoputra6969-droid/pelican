@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteInformation, saveInformation } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 import { formatDate } from "@/lib/format";
 
 type Info = {
@@ -78,7 +79,7 @@ export function InformasiManager({ items }: { items: Info[] }) {
                   <Icon name="user-edit" size={16} />
                   Edit
                 </button>
-                <form action={deleteInformation}>
+                <ActionForm action={deleteInformation}>
                   <input type="hidden" name="id" value={info.id} />
                   <button
                     type="submit"
@@ -87,7 +88,7 @@ export function InformasiManager({ items }: { items: Info[] }) {
                     <Icon name="plus" size={16} className="rotate-45" />
                     Hapus
                   </button>
-                </form>
+                </ActionForm>
               </div>
             </article>
           ))}
@@ -99,11 +100,9 @@ export function InformasiManager({ items }: { items: Info[] }) {
         onClose={() => setOpen(false)}
         title={editing ? "Edit Informasi" : "Tambah Informasi"}
       >
-        <form
-          action={async (formData) => {
-            await saveInformation(formData);
-            setOpen(false);
-          }}
+        <ActionForm
+          action={saveInformation}
+          onSuccess={() => setOpen(false)}
           className="space-y-4"
         >
           <input type="hidden" name="id" value={editing?.id ?? ""} />
@@ -164,7 +163,7 @@ export function InformasiManager({ items }: { items: Info[] }) {
           <button type="submit" className="btn-primary w-full">
             Simpan
           </button>
-        </form>
+        </ActionForm>
       </Modal>
     </div>
   );

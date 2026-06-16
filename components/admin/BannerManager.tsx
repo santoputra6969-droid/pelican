@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteBanner, saveBanner } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 
 type Banner = {
   id: number;
@@ -64,7 +65,7 @@ export function BannerManager({ items }: { items: Banner[] }) {
                     <Icon name="user-edit" size={16} />
                     Edit
                   </button>
-                  <form action={deleteBanner}>
+                  <ActionForm action={deleteBanner}>
                     <input type="hidden" name="id" value={b.id} />
                     <button
                       type="submit"
@@ -73,7 +74,7 @@ export function BannerManager({ items }: { items: Banner[] }) {
                       <Icon name="plus" size={16} className="rotate-45" />
                       Hapus
                     </button>
-                  </form>
+                  </ActionForm>
                 </div>
               </div>
             </div>
@@ -86,11 +87,9 @@ export function BannerManager({ items }: { items: Banner[] }) {
         onClose={() => setOpen(false)}
         title={editing ? "Edit Banner" : "Tambah Banner"}
       >
-        <form
-          action={async (formData) => {
-            await saveBanner(formData);
-            setOpen(false);
-          }}
+        <ActionForm
+          action={saveBanner}
+          onSuccess={() => setOpen(false)}
           className="space-y-4"
         >
           <input type="hidden" name="id" value={editing?.id ?? ""} />
@@ -134,7 +133,7 @@ export function BannerManager({ items }: { items: Banner[] }) {
           <button type="submit" className="btn-primary w-full">
             Simpan
           </button>
-        </form>
+        </ActionForm>
       </Modal>
     </div>
   );

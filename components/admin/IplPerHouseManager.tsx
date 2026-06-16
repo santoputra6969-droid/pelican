@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Icon } from "@/components/Icon";
 import { setIplAmountForHouses } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 import { formatRupiah } from "@/lib/format";
 
 type House = {
@@ -224,9 +225,9 @@ export function IplPerHouseManager({ houses }: { houses: House[] }) {
       </div>
 
       {/* Apply nominal */}
-      <form
-        action={async (formData) => {
-          await setIplAmountForHouses(formData);
+      <ActionForm
+        action={setIplAmountForHouses}
+        onSuccess={() => {
           setSelected(new Set());
           setAmount("");
         }}
@@ -253,7 +254,7 @@ export function IplPerHouseManager({ houses }: { houses: House[] }) {
           />
         </div>
         <ApplyButton disabled={selected.size === 0 || amount === ""} count={selected.size} />
-      </form>
+      </ActionForm>
     </div>
   );
 }

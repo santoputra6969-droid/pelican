@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { generateBills, setIplAmount } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 import { formatPeriod, formatRupiah } from "@/lib/format";
 
 type Period = {
@@ -44,7 +45,7 @@ export function IplManager({
             Berlaku untuk {payIplCount} dari {houseCount} rumah.
           </p>
 
-          <form action={setIplAmount} className="mt-4 flex flex-wrap items-end gap-3">
+          <ActionForm action={setIplAmount} className="mt-4 flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[180px]">
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Ubah Nominal (Rp) — diterapkan ke semua rumah
@@ -62,7 +63,7 @@ export function IplManager({
               <Icon name="check" size={18} />
               Simpan Nominal
             </button>
-          </form>
+          </ActionForm>
         </div>
 
         {/* Recent generated periods */}
@@ -115,7 +116,7 @@ export function IplManager({
             Membuat tagihan IPL untuk {payIplCount} rumah sesuai nominal
             masing-masing.
           </p>
-          <form action={generateBills} className="mt-4 space-y-3">
+          <ActionForm action={generateBills} className="mt-4 space-y-3">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Periode
@@ -136,7 +137,7 @@ export function IplManager({
               Tagihan yang sudah ada untuk periode tersebut tidak akan
               terduplikasi.
             </p>
-          </form>
+          </ActionForm>
         </div>
       </div>
     </div>

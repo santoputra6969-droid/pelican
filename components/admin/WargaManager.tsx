@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteHouse, saveHouse } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 import { formatRupiah } from "@/lib/format";
 
 type House = {
@@ -117,7 +118,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
                     >
                       <Icon name="user-edit" size={16} />
                     </button>
-                    <form action={deleteHouse}>
+                    <ActionForm action={deleteHouse}>
                       <input type="hidden" name="id" value={h.id} />
                       <button
                         type="submit"
@@ -126,7 +127,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
                       >
                         <Icon name="plus" size={16} className="rotate-45" />
                       </button>
-                    </form>
+                    </ActionForm>
                   </div>
                 </td>
               </tr>
@@ -167,7 +168,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
                 >
                   <Icon name="user-edit" size={16} />
                 </button>
-                <form action={deleteHouse}>
+                <ActionForm action={deleteHouse}>
                   <input type="hidden" name="id" value={h.id} />
                   <button
                     type="submit"
@@ -175,7 +176,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
                   >
                     <Icon name="plus" size={16} className="rotate-45" />
                   </button>
-                </form>
+                </ActionForm>
               </div>
             </div>
           </div>
@@ -187,11 +188,9 @@ export function WargaManager({ houses }: { houses: House[] }) {
         onClose={() => setOpen(false)}
         title={editing ? "Edit Data Rumah" : "Tambah Data Rumah"}
       >
-        <form
-          action={async (formData) => {
-            await saveHouse(formData);
-            setOpen(false);
-          }}
+        <ActionForm
+          action={saveHouse}
+          onSuccess={() => setOpen(false)}
           className="space-y-4"
         >
           <input type="hidden" name="id" value={editing?.id ?? ""} />
@@ -275,7 +274,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
           <button type="submit" className="btn-primary w-full">
             Simpan
           </button>
-        </form>
+        </ActionForm>
       </Modal>
     </div>
   );

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { formatDateTime } from "@/lib/format";
 import { updateComplaint, deleteComplaint } from "@/app/admin/actions";
+import { ActionForm } from "./ActionForm";
 
 type Row = {
   id: number;
@@ -109,7 +110,7 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
                 <span>{formatDateTime(c.date)}</span>
               </div>
 
-              <form
+              <ActionForm
                 action={updateComplaint}
                 className="mt-3 space-y-2 border-t border-black/5 pt-3"
               >
@@ -141,9 +142,9 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
                     Simpan
                   </button>
                 </div>
-              </form>
+              </ActionForm>
 
-              <form action={deleteComplaint} className="mt-2">
+              <ActionForm action={deleteComplaint} className="mt-2">
                 <input type="hidden" name="id" value={c.id} />
                 <button
                   type="submit"
@@ -151,7 +152,7 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
                 >
                   Hapus pengaduan
                 </button>
-              </form>
+              </ActionForm>
             </div>
           ))}
         </div>
