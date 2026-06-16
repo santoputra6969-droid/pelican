@@ -91,7 +91,7 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="mb-1 block text-[11px] font-semibold text-ink-soft">
                 Dari Tanggal
               </label>
@@ -99,10 +99,10 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
                 type="date"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                className="input py-2.5 text-sm"
+                className="input min-w-0 appearance-none px-3 py-2.5 text-sm"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="mb-1 block text-[11px] font-semibold text-ink-soft">
                 Sampai Tanggal
               </label>
@@ -110,7 +110,7 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
                 type="date"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                className="input py-2.5 text-sm"
+                className="input min-w-0 appearance-none px-3 py-2.5 text-sm"
               />
             </div>
           </div>
