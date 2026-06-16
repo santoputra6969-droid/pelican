@@ -26,7 +26,7 @@ export default async function BayarIplPage() {
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       <PageHeader title="Bayar IPL" subtitle={`Blok ${house.block} / No. ${house.no}`} />
 
       {/* Property info */}

@@ -293,7 +293,7 @@ function ActiveBills({
       </section>
 
       {/* Pay bar */}
-      <form action={formAction} className="sticky bottom-20 z-20 mt-6 px-5">
+      <form action={formAction} className="sticky bottom-20 z-20 mb-8 mt-6 px-5">
         <input type="hidden" name="billIds" value={selectedIds.join(",")} />
         <input type="hidden" name="method" value={method} />
         <PayButton amount={total} disabled={selectedBills.length === 0} />

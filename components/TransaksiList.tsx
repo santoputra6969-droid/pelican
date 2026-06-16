@@ -142,7 +142,7 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
             </p>
           </div>
         ) : (
-          <div className="card divide-y divide-black/5">
+          <div className="card max-h-[60vh] divide-y divide-black/5 overflow-y-auto">
             {filtered.map((t) => {
               const masuk = t.mutation === "DEBIT";
               return (

@@ -34,7 +34,7 @@ export default async function ProfilPage() {
     .toUpperCase();
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       <PageHeader title="Profil Rumah" subtitle="Data hunian Anda" />
 
       {/* Identity */}
@@ -115,7 +115,7 @@ export default async function ProfilPage() {
       ) : null}
 
       {/* Ganti rumah */}
-      <section className="mt-5 px-5">
+      <section className="mt-5 px-5 pb-8">
         <form action={clearHouse}>
           <button type="submit" className="btn-ghost w-full">
             <Icon name="swap" size={18} />
