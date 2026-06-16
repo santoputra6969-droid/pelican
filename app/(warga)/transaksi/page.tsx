@@ -22,7 +22,7 @@ export default async function TransaksiPage() {
   ]);
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       <PageHeader title="Daftar Transaksi" subtitle="Jurnal kas cluster" />
 
       <section className="-mt-2 px-5">
@@ -73,6 +73,7 @@ export default async function TransaksiPage() {
         }))}
       />
 
+      <div className="h-6" />
       <BottomNav />
     </main>
   );

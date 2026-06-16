@@ -13,7 +13,7 @@ export default async function InformasiPage() {
   });
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       <PageHeader title="Informasi" subtitle="Kabar terbaru dari pengelola" />
 
       <section className="-mt-2 px-5">
@@ -59,6 +59,7 @@ export default async function InformasiPage() {
         )}
       </section>
 
+      <div className="h-6" />
       <BottomNav />
     </main>
   );

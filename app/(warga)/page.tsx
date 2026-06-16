@@ -50,9 +50,9 @@ export default async function HomePage() {
     .toUpperCase();
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       {/* Header */}
-      <header className="relative overflow-hidden bg-gradient-to-b from-pelican-700 via-pelican-600 to-pelican-600 px-5 pb-16 pt-[max(env(safe-area-inset-top),1.25rem)] text-white">
+      <header className="sticky top-0 z-30 overflow-hidden bg-gradient-to-b from-pelican-700 via-pelican-600 to-pelican-600 px-5 pb-6 pt-[max(env(safe-area-inset-top),1.25rem)] text-white">
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -81,7 +81,7 @@ export default async function HomePage() {
       </header>
 
       {/* Saldo kas card */}
-      <section className="relative z-10 -mt-10 px-5">
+      <section className="px-5 pt-5">
         <div className="card overflow-hidden p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -250,6 +250,7 @@ export default async function HomePage() {
         </section>
       )}
 
+      <div className="h-6" />
       <BottomNav />
     </main>
   );

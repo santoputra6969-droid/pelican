@@ -15,7 +15,7 @@ export default function MenuPage() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col pb-24">
+    <main className="flex min-h-screen flex-col">
       <PageHeader title="Semua Menu" subtitle="Layanan lengkap warga" />
 
       <section className="-mt-2 px-5">
@@ -78,6 +78,7 @@ export default function MenuPage() {
         </div>
       </section>
 
+      <div className="h-6" />
       <BottomNav />
     </main>
   );
