@@ -39,6 +39,16 @@ async function main() {
   });
   console.log("  ✓ admin (admin / admin123)");
 
+  // --- Guard: hanya isi data awal kalau database masih kosong. ---
+  // Mencegah data warga asli (mis. KTP, rumah baru) terhapus tiap deploy.
+  const existingHouses = await prisma.house.count();
+  if (existingHouses > 0) {
+    console.log(
+      `  ⏭️  ${existingHouses} rumah sudah ada — lewati reseed (data dipertahankan).`
+    );
+    return;
+  }
+
   // --- Wipe existing data (idempotent reseed) ---
   await prisma.bill.deleteMany();
   await prisma.transaction.deleteMany();
