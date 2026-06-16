@@ -1,5 +1,6 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminTransaksiTable } from "@/components/admin/AdminTransaksiTable";
+import { AddTransaksiForm } from "@/components/admin/AddTransaksiForm";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
 import { Icon } from "@/components/Icon";
@@ -28,6 +29,7 @@ export default async function AdminTransaksiPage() {
       <AdminPageHeader
         title="Jurnal Kas"
         subtitle="Seluruh transaksi pemasukan & pengeluaran cluster"
+        action={<AddTransaksiForm />}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

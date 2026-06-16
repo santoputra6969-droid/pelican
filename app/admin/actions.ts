@@ -91,6 +91,59 @@ export async function generateBills(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/* ----------------------------- Transactions ----------------------------- */
+
+export async function createTransaction(formData: FormData) {
+  const admin = await requireAdmin();
+  const kind = String(formData.get("kind") ?? "KELUAR"); // MASUK | KELUAR
+  const category = String(formData.get("category") ?? "UTAMA") === "PKK" ? "PKK" : "UTAMA";
+  const type = String(formData.get("type") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+
+  if (!type || !Number.isFinite(amount) || amount <= 0) return;
+
+  const mutation = kind === "MASUK" ? "DEBIT" : "KREDIT";
+  const delta = mutation === "DEBIT" ? amount : -amount;
+
+  await prisma.$transaction(async (tx) => {
+    const trx = await tx.transaction.create({
+      data: {
+        category,
+        type,
+        notes,
+        amount,
+        mutation,
+        createdBy: admin.username,
+      },
+    });
+
+    const bal = await tx.balance.findFirst({ orderBy: { id: "asc" } });
+    if (bal) {
+      await tx.balance.update({
+        where: { id: bal.id },
+        data:
+          category === "PKK"
+            ? {
+                balancePkk: { increment: delta },
+                lastTxId: String(trx.id),
+                updatedBy: admin.username,
+              }
+            : {
+                balance: { increment: delta },
+                lastTxId: String(trx.id),
+                updatedBy: admin.username,
+              },
+      });
+    }
+  });
+
+  revalidatePath("/admin/transaksi");
+  revalidatePath("/admin");
+  revalidatePath("/transaksi");
+  revalidatePath("/");
+}
+
 /* ------------------------------ Information ------------------------------ */
 
 export async function saveInformation(formData: FormData) {
