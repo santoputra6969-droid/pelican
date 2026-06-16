@@ -13,6 +13,7 @@ export default async function AdminDashboard() {
     balance,
     infoCount,
     bannerCount,
+    newComplaints,
     recentTx,
   ] = await Promise.all([
     prisma.house.count(),
@@ -24,6 +25,7 @@ export default async function AdminDashboard() {
     prisma.balance.findFirst({ orderBy: { id: "asc" } }),
     prisma.information.count({ where: { published: true } }),
     prisma.banner.count({ where: { active: true } }),
+    prisma.complaint.count({ where: { status: "BARU" } }),
     prisma.transaction.findMany({
       orderBy: { createdAt: "desc" },
       take: 6,
@@ -64,6 +66,13 @@ export default async function AdminDashboard() {
       icon: "megaphone",
       accent: "#8b5cf6",
       href: "/admin/informasi",
+    },
+    {
+      label: "Pengaduan Baru",
+      value: String(newComplaints),
+      icon: "chat",
+      accent: "#eab308",
+      href: "/admin/pengaduan",
     },
   ];
 

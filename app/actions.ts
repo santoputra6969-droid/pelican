@@ -209,3 +209,67 @@ export async function createPayment(
   }
 }
 
+/* ------------------------------ Pengaduan ------------------------------ */
+
+export type ComplaintResult =
+  | { ok: true }
+  | { ok: false; message: string }
+  | null;
+
+const COMPLAINT_CATEGORIES = [
+  "KEAMANAN",
+  "KEBERSIHAN",
+  "FASILITAS",
+  "LINGKUNGAN",
+  "UMUM",
+];
+
+export async function createComplaint(
+  _prev: ComplaintResult,
+  formData: FormData
+): Promise<ComplaintResult> {
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+
+  const rawCategory = String(formData.get("category") ?? "UMUM").toUpperCase();
+  const category = COMPLAINT_CATEGORIES.includes(rawCategory)
+    ? rawCategory
+    : "UMUM";
+  const message = String(formData.get("message") ?? "").trim();
+
+  if (message.length < 5) {
+    return { ok: false, message: "Tuliskan keluhan minimal 5 karakter." };
+  }
+  if (message.length > 2000) {
+    return { ok: false, message: "Keluhan terlalu panjang (maks 2000 karakter)." };
+  }
+
+  let houseLabel: string | null = null;
+  let ownerName: string | null = null;
+  if (Number.isFinite(houseId) && houseId > 0) {
+    const house = await prisma.house.findUnique({ where: { id: houseId } });
+    if (house) {
+      houseLabel = `Blok ${house.block} / No. ${house.no}`;
+      ownerName = house.ownerName ?? null;
+    }
+  }
+
+  try {
+    await prisma.complaint.create({
+      data: {
+        houseId: Number.isFinite(houseId) && houseId > 0 ? houseId : null,
+        houseLabel,
+        ownerName,
+        category,
+        message,
+      },
+    });
+    revalidatePath("/pengaduan");
+    revalidatePath("/admin/pengaduan");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Gagal mengirim pengaduan. Coba lagi." };
+  }
+}
+

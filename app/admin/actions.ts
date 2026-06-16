@@ -267,3 +267,39 @@ export async function deleteHouse(formData: FormData) {
   if (id) await prisma.house.delete({ where: { id } });
   revalidatePath("/admin/warga");
 }
+
+/* ------------------------------ Pengaduan ------------------------------- */
+
+const COMPLAINT_STATUSES = ["BARU", "DIPROSES", "SELESAI"];
+
+export async function updateComplaint(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+
+  const rawStatus = String(formData.get("status") ?? "").toUpperCase();
+  const status = COMPLAINT_STATUSES.includes(rawStatus) ? rawStatus : "BARU";
+  const reply = String(formData.get("reply") ?? "").trim() || null;
+
+  await prisma.complaint.update({
+    where: { id },
+    data: {
+      status,
+      reply,
+      repliedBy: reply ? admin.username : undefined,
+    },
+  });
+
+  revalidatePath("/admin/pengaduan");
+  revalidatePath("/admin");
+  revalidatePath("/pengaduan");
+}
+
+export async function deleteComplaint(formData: FormData) {
+  await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (id) await prisma.complaint.delete({ where: { id } });
+  revalidatePath("/admin/pengaduan");
+  revalidatePath("/admin");
+}
+

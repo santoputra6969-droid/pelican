@@ -11,6 +11,7 @@ const nav: { label: string; href: string; icon: IconName }[] = [
   { label: "Informasi", href: "/admin/informasi", icon: "megaphone" },
   { label: "Banner", href: "/admin/banner", icon: "park" },
   { label: "Transaksi", href: "/admin/transaksi", icon: "receipt" },
+  { label: "Pengaduan", href: "/admin/pengaduan", icon: "chat" },
   { label: "Data Warga", href: "/admin/warga", icon: "user" },
 ];
 
