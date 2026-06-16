@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f5f8f6;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--background);
+  color: #0f1f1a;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbar for carousels but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer components {
+  .app-shell {
+    @apply mx-auto min-h-screen w-full max-w-[480px] bg-[var(--background)] shadow-[0_0_60px_-20px_rgba(0,0,0,0.25)];
+  }
+
+  .card {
+    @apply rounded-3xl bg-white shadow-card;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-pelican-600 px-5 py-3.5 text-sm font-semibold text-white shadow-glow transition active:scale-[0.97] disabled:opacity-50 disabled:shadow-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-pelican-100 bg-white px-5 py-3.5 text-sm font-semibold text-pelican-700 transition active:scale-[0.97];
+  }
+
+  .input {
+    @apply w-full rounded-2xl border border-black/5 bg-white px-4 py-3.5 text-sm text-ink outline-none ring-pelican-400/40 transition placeholder:text-ink-faint focus:border-pelican-300 focus:ring-4;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-pelican-50 px-3 py-1 text-xs font-medium text-pelican-700;
+  }
+}

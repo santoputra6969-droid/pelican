@@ -1,0 +1,32 @@
+[
+  {
+    "id": 3,
+    "banner": "https://firebasestorage.googleapis.com/v0/b/puri-pelican-app.appspot.com/o/Banner%2Fbanner_1777056320459.jpg?alt=media&token=501d9390-7fc0-4b18-aa4c-62b296f04656",
+    "deleted_by": null,
+    "created_by": "bima",
+    "updated_by": null,
+    "deleted_at": null,
+    "created_at": "2026-04-24T18:45:27.000000Z",
+    "updated_at": "2026-04-24T18:45:27.000000Z"
+  },
+  {
+    "id": 2,
+    "banner": "https://firebasestorage.googleapis.com/v0/b/puri-pelican-app.appspot.com/o/Banner%2Fbanner_1775937967781.jpg?alt=media&token=30f81034-983d-4405-96f8-710f0f893133",
+    "deleted_by": null,
+    "created_by": "bima",
+    "updated_by": null,
+    "deleted_at": null,
+    "created_at": "2026-04-11T20:06:13.000000Z",
+    "updated_at": "2026-04-11T20:06:13.000000Z"
+  },
+  {
+    "id": 1,
+    "banner": "https://firebasestorage.googleapis.com/v0/b/puri-pelican-app.appspot.com/o/Banner%2Fbanner_1766817122554.png?alt=media&token=327efc5e-d554-4ea3-aebe-48951df48204",
+    "deleted_by": null,
+    "created_by": "sadmin",
+    "updated_by": null,
+    "deleted_at": null,
+    "created_at": "2025-12-27T06:32:04.000000Z",
+    "updated_at": "2025-12-27T06:32:04.000000Z"
+  }
+]

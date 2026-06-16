@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+// 200 rumah dari data asli Puri Pelican
+model House {
+  id              Int      @id @default(autoincrement())
+  block           String // PLC-1 .. PLC-8
+  no              String // nomor rumah (string, mis. "1", "15")
+  ownerName       String? // nama pemilik/penghuni (bisa kosong)
+  occupied        Boolean  @default(false)
+  occupiedByOwner Boolean  @default(false)
+  payIpl          Boolean  @default(true)
+  iplAmount       Int      @default(252000)
+  payCash         Boolean  @default(false)
+  cashAmount      Int?
+  payPkk          Boolean  @default(false)
+  pkkAmount       Int?
+  createdAt       DateTime @default(now())
+  bills           Bill[]
+
+  @@unique([block, no])
+}
+
+// Tagihan IPL per rumah per bulan
+model Bill {
+  id            Int      @id @default(autoincrement())
+  house         House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  houseId       Int
+  year          Int
+  month         Int
+  amount        Int
+  status        String   @default("UNPAID") // UNPAID | PAID
+  transactionId Int? // id transaksi journal saat dibayar
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@unique([houseId, year, month])
+  @@index([status])
+}
+
+// Buku kas / jurnal transaksi komunitas (pemasukan & pengeluaran)
+model Transaction {
+  id           Int      @id @default(autoincrement())
+  category     String   @default("UTAMA") // UTAMA | PKK
+  type         String? // IPL | KAS | PKK | pengeluaran (Gaji Security, dst)
+  idSettlement String?  @unique
+  notes        String?
+  amount       Int
+  mutation     String   @default("DEBIT") // DEBIT (masuk) | KREDIT (keluar)
+  image        String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+// Saldo kas cluster (Saldo Utama & Kas PKK)
+model Balance {
+  id         Int      @id @default(autoincrement())
+  balance    Float    @default(0) // Saldo Utama
+  balancePkk Float    @default(0) // Saldo Kas PKK
+  lastTxId   String?
+  updatedBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+}
+
+// Banner promosi (gambar)
+model Banner {
+  id        Int      @id @default(autoincrement())
+  image     String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+// Informasi / pengumuman warga (konten HTML)
+model Information {
+  id        String   @id @default(cuid())
+  legacyId  Int?     @unique
+  title     String
+  content   String // HTML
+  image     String?
+  isPin     Boolean  @default(false)
+  published Boolean  @default(true)
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+// Kategori pengeluaran (untuk admin saat catat transaksi)
+model TransactionType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdBy String?
+  createdAt DateTime @default(now())
+}
