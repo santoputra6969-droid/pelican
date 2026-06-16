@@ -41,6 +41,44 @@ async function fixSequences() {
   console.log("  ✓ sequence auto-increment disinkronkan");
 }
 
+// Mengisi tabel Resident (Data Pemilik) dari kolom ownerName rumah yang sudah
+// ada. Idempotent: hanya membuat record untuk rumah yang BELUM punya penghuni,
+// jadi aman dijalankan tiap deploy tanpa menimpa data KTP/KK yang sudah diisi.
+async function backfillResidents() {
+  const houses = await prisma.house.findMany({
+    where: { ownerName: { not: null } },
+    select: { id: true, ownerName: true },
+  });
+
+  const withResident = new Set(
+    (
+      await prisma.resident.findMany({
+        select: { houseId: true },
+        distinct: ["houseId"],
+      })
+    ).map((r) => r.houseId)
+  );
+
+  const toCreate = houses
+    .filter((h) => {
+      const name = (h.ownerName ?? "").trim();
+      return name && name !== "-" && !withResident.has(h.id);
+    })
+    .map((h) => ({
+      houseId: h.id,
+      role: "PEMILIK",
+      name: (h.ownerName ?? "").trim(),
+      familyStatus: "Kepala Keluarga",
+    }));
+
+  if (toCreate.length) {
+    for (let i = 0; i < toCreate.length; i += 500) {
+      await prisma.resident.createMany({ data: toCreate.slice(i, i + 500) });
+    }
+  }
+  console.log(`  ✓ backfill ${toCreate.length} pemilik dari nama rumah`);
+}
+
 async function main() {
   console.log("🌱 Seeding database from scraped Puri Pelican data...");
 
@@ -65,6 +103,7 @@ async function main() {
     console.log(
       `  ⏭️  ${existingHouses} rumah sudah ada — lewati reseed (data dipertahankan).`
     );
+    await backfillResidents();
     await fixSequences();
     return;
   }
@@ -231,6 +270,7 @@ async function main() {
   });
   console.log(`  ✓ ${seenType.size} transaction types`);
 
+  await backfillResidents();
   await fixSequences();
 
   console.log("✅ Seed complete. Admin login → admin / admin123");
