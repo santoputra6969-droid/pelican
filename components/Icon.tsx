@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import type { ReactElement, SVGProps } from "react";
 
 type IconName =
   | "apps"
@@ -29,7 +29,7 @@ type IconName =
   | "search"
   | "send";
 
-const paths: Record<IconName, JSX.Element> = {
+const paths: Record<IconName, ReactElement> = {
   apps: (
     <>
       <rect x="3" y="3" width="7" height="7" rx="2" />
