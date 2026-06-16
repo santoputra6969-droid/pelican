@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { HOUSE_COOKIE } from "@/lib/session";
 import { formatPeriod } from "@/lib/format";
+import { createSnapTransaction } from "@/lib/midtrans";
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -113,3 +114,98 @@ export async function payBill(
 
   return { ok: true, period: periodLabel, amount: total, count: unpaid.length };
 }
+
+/* --------------------------- Midtrans payment --------------------------- */
+
+export type CreatePaymentResult =
+  | { ok: true; token: string; orderId: string; amount: number }
+  | { ok: false; message: string }
+  | null;
+
+export async function createPayment(
+  _prev: CreatePaymentResult,
+  formData: FormData
+): Promise<CreatePaymentResult> {
+  const rawIds = String(formData.get("billIds") ?? formData.get("billId") ?? "");
+  const billIds = rawIds
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+  if (!houseId || billIds.length === 0)
+    return { ok: false, message: "Sesi tidak valid." };
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+  if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
+
+  const bills = await prisma.bill.findMany({
+    where: { id: { in: billIds }, houseId, status: { not: "PAID" } },
+    orderBy: [{ year: "asc" }, { month: "asc" }],
+  });
+  if (bills.length === 0)
+    return { ok: false, message: "Tidak ada tagihan yang bisa dibayar." };
+
+  const total = bills.reduce((sum, b) => sum + b.amount, 0);
+  const orderId = `IPL-${houseId}-${Date.now()}-${Math.floor(
+    Math.random() * 1000
+  )
+    .toString()
+    .padStart(3, "0")}`;
+
+  const items = bills.map((b) => ({
+    id: String(b.id),
+    price: b.amount,
+    quantity: 1,
+    name: `IPL ${formatPeriod(b.year, b.month)}`.slice(0, 50),
+  }));
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ?? "";
+
+  try {
+    await prisma.payment.create({
+      data: {
+        orderId,
+        houseId,
+        billIds: bills.map((b) => b.id).join(","),
+        amount: total,
+        status: "PENDING",
+        createdBy: house.ownerName ?? `Blok ${house.block} No ${house.no}`,
+      },
+    });
+
+    const snap = await createSnapTransaction({
+      orderId,
+      grossAmount: total,
+      items,
+      customer: {
+        first_name: house.ownerName ?? `Blok ${house.block}`,
+        last_name: `No ${house.no}`,
+      },
+      finishRedirectUrl: baseUrl
+        ? `${baseUrl}/bayar-ipl/selesai?order_id=${orderId}`
+        : undefined,
+      notificationUrl: baseUrl
+        ? `${baseUrl}/api/midtrans/notification`
+        : undefined,
+    });
+
+    await prisma.payment.update({
+      where: { orderId },
+      data: { snapToken: snap.token },
+    });
+
+    return { ok: true, token: snap.token, orderId, amount: total };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Gagal membuat pembayaran. Coba lagi.",
+    };
+  }
+}
+

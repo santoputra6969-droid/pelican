@@ -1,22 +1,27 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { IplManager } from "@/components/admin/IplManager";
+import { IplPerHouseManager } from "@/components/admin/IplPerHouseManager";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminIplPage() {
-  const [houseCount, payIplCount, sampleHouse, recentBills] = await Promise.all([
-    prisma.house.count(),
-    prisma.house.count({ where: { payIpl: true } }),
-    prisma.house.findFirst({ where: { payIpl: true }, orderBy: { id: "asc" } }),
-    prisma.bill.groupBy({
-      by: ["year", "month"],
-      _count: { _all: true },
-      _sum: { amount: true },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: 6,
-    }),
-  ]);
+  const [houseCount, payIplCount, sampleHouse, recentBills, houses] =
+    await Promise.all([
+      prisma.house.count(),
+      prisma.house.count({ where: { payIpl: true } }),
+      prisma.house.findFirst({ where: { payIpl: true }, orderBy: { id: "asc" } }),
+      prisma.bill.groupBy({
+        by: ["year", "month"],
+        _count: { _all: true },
+        _sum: { amount: true },
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        take: 6,
+      }),
+      prisma.house.findMany({
+        select: { id: true, block: true, no: true, iplAmount: true, payIpl: true },
+      }),
+    ]);
 
   const paidByPeriod = await prisma.bill.groupBy({
     by: ["year", "month"],
@@ -45,6 +50,10 @@ export default async function AdminIplPage() {
           total: b._sum.amount ?? 0,
         }))}
       />
+
+      <div className="mt-6">
+        <IplPerHouseManager houses={houses} />
+      </div>
     </div>
   );
 }

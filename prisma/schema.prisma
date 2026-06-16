@@ -113,3 +113,24 @@ model TransactionType {
   createdBy String?
   createdAt DateTime @default(now())
 }
+
+// Order pembayaran via Midtrans (Snap). Menjembatani klik Bayar -> webhook settlement.
+model Payment {
+  id            Int      @id @default(autoincrement())
+  orderId       String   @unique // order_id yang dikirim ke Midtrans
+  houseId       Int
+  billIds       String // daftar id tagihan, dipisah koma
+  amount        Int // gross_amount
+  status        String   @default("PENDING") // PENDING | PAID | EXPIRED | FAILED | CANCEL
+  snapToken     String?
+  paymentType   String? // qris | bank_transfer | gopay | dst
+  fee           Int      @default(0) // biaya MDR Midtrans (jika ada)
+  settledAt     DateTime?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([houseId])
+}
+

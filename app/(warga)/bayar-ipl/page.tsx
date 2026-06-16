@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { BayarIpl } from "@/components/BayarIpl";
 import { prisma } from "@/lib/prisma";
 import { getSelectedHouse } from "@/lib/session";
+import { snapJsUrl, getClientKey } from "@/lib/midtrans";
+import Script from "next/script";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +60,12 @@ export default async function BayarIplPage() {
           month: b.month,
           amount: b.amount,
         }))}
+      />
+
+      <Script
+        src={snapJsUrl()}
+        data-client-key={getClientKey()}
+        strategy="afterInteractive"
       />
 
       <BottomNav />

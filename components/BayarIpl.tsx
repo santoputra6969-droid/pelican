@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { payBill, type PayResult } from "@/app/actions";
+import { createPayment, type CreatePaymentResult } from "@/app/actions";
 import { Icon } from "./Icon";
 import { formatPeriod, formatRupiah } from "@/lib/format";
 
@@ -13,10 +13,21 @@ type BillLite = {
   amount: number;
 };
 
-const methods = [
-  { id: "VA", label: "Virtual Account BCA", icon: "wallet" as const },
-  { id: "QRIS", label: "QRIS", icon: "scan" as const },
-];
+declare global {
+  interface Window {
+    snap?: {
+      pay: (
+        token: string,
+        opts?: {
+          onSuccess?: () => void;
+          onPending?: () => void;
+          onError?: () => void;
+          onClose?: () => void;
+        }
+      ) => void;
+    };
+  }
+}
 
 export function BayarIpl({
   bills,
@@ -29,11 +40,30 @@ export function BayarIpl({
   const [selectedIds, setSelectedIds] = useState<number[]>(
     bills[0] ? [bills[0].id] : []
   );
-  const [method, setMethod] = useState("VA");
-  const [state, formAction] = useActionState<PayResult, FormData>(
-    payBill,
+  const [state, formAction] = useActionState<CreatePaymentResult, FormData>(
+    createPayment,
     null
   );
+
+  // Saat token Snap siap, buka popup pembayaran Midtrans.
+  useEffect(() => {
+    if (state?.ok && state.token) {
+      const orderId = state.orderId;
+      const finish = () => {
+        window.location.href = `/bayar-ipl/selesai?order_id=${orderId}`;
+      };
+      if (typeof window !== "undefined" && window.snap) {
+        window.snap.pay(state.token, {
+          onSuccess: finish,
+          onPending: finish,
+          onError: finish,
+        });
+      } else {
+        // Snap belum termuat: arahkan ke halaman status.
+        finish();
+      }
+    }
+  }, [state]);
 
   const selectedBills = bills.filter((b) => selectedIds.includes(b.id));
 
@@ -111,8 +141,6 @@ export function BayarIpl({
           selectedIds={selectedIds}
           setSelectedIds={setSelectedIds}
           selectedBills={selectedBills}
-          method={method}
-          setMethod={setMethod}
           formAction={formAction}
           state={state}
         />
@@ -126,8 +154,6 @@ function ActiveBills({
   selectedIds,
   setSelectedIds,
   selectedBills,
-  method,
-  setMethod,
   formAction,
   state,
 }: {
@@ -135,10 +161,8 @@ function ActiveBills({
   selectedIds: number[];
   setSelectedIds: (ids: number[]) => void;
   selectedBills: BillLite[];
-  method: string;
-  setMethod: (m: string) => void;
   formAction: (formData: FormData) => void;
-  state: PayResult;
+  state: CreatePaymentResult;
 }) {
   const total = selectedBills.reduce((sum, b) => sum + b.amount, 0);
   const allSelected = bills.length > 0 && selectedIds.length === bills.length;
@@ -260,42 +284,20 @@ function ActiveBills({
       {/* Metode */}
       <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-bold text-ink">Metode Pembayaran</h2>
-        <div className="card space-y-2 p-4">
-          {methods.map((m) => {
-            const active = method === m.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => setMethod(m.id)}
-                className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left ${
-                  active ? "border-pelican-300 bg-pelican-50/60" : "border-black/5"
-                }`}
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-pelican-600 shadow-sm">
-                  <Icon name={m.icon} size={18} />
-                </span>
-                <span className="flex-1 text-sm font-semibold text-ink">
-                  {m.label}
-                </span>
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                    active
-                      ? "border-pelican-500 bg-pelican-500 text-white"
-                      : "border-black/15"
-                  }`}
-                >
-                  {active && <Icon name="check" size={12} />}
-                </span>
-              </button>
-            );
-          })}
+        <div className="card flex items-center gap-3 p-4">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-50 text-pelican-600">
+            <Icon name="scan" size={18} />
+          </span>
+          <p className="text-xs text-ink-soft">
+            Pilih metode pembayaran (QRIS, Virtual Account, e-wallet, kartu) di
+            langkah berikutnya yang aman oleh Midtrans.
+          </p>
         </div>
       </section>
 
       {/* Pay bar */}
       <form action={formAction} className="sticky bottom-20 z-20 mb-8 mt-6 px-5">
         <input type="hidden" name="billIds" value={selectedIds.join(",")} />
-        <input type="hidden" name="method" value={method} />
         <PayButton amount={total} disabled={selectedBills.length === 0} />
         {state && !state.ok && (
           <p className="mt-2 text-center text-xs font-semibold text-red-500">
@@ -303,38 +305,6 @@ function ActiveBills({
           </p>
         )}
       </form>
-
-      {/* Success sheet */}
-      {state?.ok && (
-        <div className="fixed inset-0 z-50 mx-auto flex max-w-[480px] items-end bg-black/40 backdrop-blur-sm">
-          <div className="w-full animate-fade-up rounded-t-[2rem] bg-white p-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-pelican-100 text-pelican-600">
-              <Icon name="check" size={36} />
-            </div>
-            <h3 className="mt-4 text-lg font-bold text-ink">
-              Pembayaran Berhasil
-            </h3>
-            <p className="mt-1 text-sm text-ink-soft">
-              {state.count > 1
-                ? `${state.count} tagihan IPL sebesar ${formatRupiah(
-                    state.amount
-                  )} telah dibayar.`
-                : `IPL ${state.period} sebesar ${formatRupiah(
-                    state.amount
-                  )} telah dibayar.`}
-            </p>
-            <a href="/transaksi" className="btn-primary mt-5 w-full">
-              Lihat Transaksi
-            </a>
-            <a
-              href="/"
-              className="mt-2 block text-sm font-semibold text-ink-faint"
-            >
-              Kembali ke Beranda
-            </a>
-          </div>
-        </div>
-      )}
     </>
   );
 }

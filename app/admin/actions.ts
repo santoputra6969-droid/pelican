@@ -65,6 +65,25 @@ export async function setIplAmount(formData: FormData) {
   revalidatePath("/admin/ipl");
 }
 
+export async function setIplAmountForHouses(formData: FormData) {
+  const admin = await requireAdmin();
+  const amount = Number(formData.get("amount") ?? 0);
+  const ids = String(formData.get("houseIds") ?? "")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+
+  if (!Number.isFinite(amount) || amount < 0 || ids.length === 0) return;
+
+  await prisma.house.updateMany({
+    where: { id: { in: ids } },
+    data: { iplAmount: amount },
+  });
+  void admin;
+  revalidatePath("/admin/ipl");
+  revalidatePath("/admin");
+}
+
 export async function generateBills(formData: FormData) {
   const admin = await requireAdmin();
   const period = String(formData.get("period") ?? "").trim(); // YYYY-MM
