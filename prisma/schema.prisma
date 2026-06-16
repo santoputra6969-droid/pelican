@@ -32,6 +32,7 @@ model House {
   pkkAmount       Int?
   createdAt       DateTime @default(now())
   bills           Bill[]
+  residents       Resident[]
 
   @@unique([block, no])
 }
@@ -150,5 +151,144 @@ model Complaint {
 
   @@index([status])
   @@index([houseId])
+}
+
+// File terbatas-akses (KTP/KK/arsip/lampiran). Disimpan sebagai bytea di
+// Postgres, TIDAK pernah punya URL publik. Hanya disajikan lewat route admin
+// yang memvalidasi sesi — aman dari kebocoran karena tidak ter-expose.
+model StoredFile {
+  id        String   @id @default(cuid())
+  filename  String
+  mimeType  String
+  size      Int
+  kind      String   @default("DOC") // KTP | KK | ARSIP | LAMPIRAN | DOC
+  data      Bytes // konten file (bytea)
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([kind])
+}
+
+// Data anggota rumah (Pemilik / Penghuni) untuk pendataan KK/KTP.
+model Resident {
+  id           Int      @id @default(autoincrement())
+  house        House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  houseId      Int
+  role         String   @default("PEMILIK") // PEMILIK | PENGHUNI
+  name         String
+  phone        String?
+  nik          String? // NIK KTP
+  familyStatus String? // K0, K1, dst
+  active       Boolean  @default(true)
+  ktpFileId    String? // -> StoredFile (foto/scan KTP)
+  kkFileId     String? // -> StoredFile (foto/scan Kartu Keluarga)
+  note         String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([houseId])
+  @@index([role])
+}
+
+// Arsip dokumen (laporan keuangan PDF, notulen, dll).
+model Archive {
+  id        String   @id @default(cuid())
+  title     String
+  category  String   @default("UMUM") // LAPORAN | NOTULEN | SK | UMUM
+  fileId    String // -> StoredFile
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
+// Pengajuan surat dari warga (Surat Pengantar, Domisili, dll).
+model LetterRequest {
+  id           Int      @id @default(autoincrement())
+  houseId      Int?
+  houseLabel   String?
+  applicant    String // nama pemohon
+  phone        String?
+  type         String   @default("PENGANTAR") // PENGANTAR | DOMISILI | KETERANGAN | LAINNYA
+  purpose      String // keperluan
+  status       String   @default("OPEN") // OPEN | DIPROSES | SELESAI | DITOLAK
+  note         String? // catatan admin
+  resultFileId String? // -> StoredFile (surat jadi PDF)
+  handledBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@index([houseId])
+}
+
+// Voting / polling warga.
+model Vote {
+  id        Int          @id @default(autoincrement())
+  question  String
+  detail    String?
+  active    Boolean      @default(true)
+  closesAt  DateTime?
+  createdBy String?
+  createdAt DateTime     @default(now())
+  options   VoteOption[]
+  ballots   VoteBallot[]
+
+  @@index([active])
+}
+
+model VoteOption {
+  id      Int          @id @default(autoincrement())
+  vote    Vote         @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  voteId  Int
+  label   String
+  order   Int          @default(0)
+  ballots VoteBallot[]
+
+  @@index([voteId])
+}
+
+// Satu suara per rumah per voting.
+model VoteBallot {
+  id        Int        @id @default(autoincrement())
+  vote      Vote       @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  voteId    Int
+  option    VoteOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId  Int
+  houseId   Int
+  voterName String?
+  createdAt DateTime   @default(now())
+
+  @@unique([voteId, houseId])
+  @@index([voteId])
+}
+
+// Kontribusi / iuran khusus (mis. sumbangan kegiatan).
+model Contribution {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  target      Int? // target dana (opsional)
+  active      Boolean             @default(true)
+  createdBy   String?
+  createdAt   DateTime            @default(now())
+  entries     ContributionEntry[]
+
+  @@index([active])
+}
+
+model ContributionEntry {
+  id             String       @id @default(cuid())
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  contributionId String
+  houseId        Int?
+  donorName      String?
+  amount         Int
+  note           String?
+  createdBy      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([contributionId])
 }
 

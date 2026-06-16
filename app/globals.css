@@ -67,6 +67,10 @@ body {
     @apply w-full rounded-2xl border border-black/5 bg-white px-4 py-3.5 text-sm text-ink outline-none ring-pelican-400/40 transition placeholder:text-ink-faint focus:border-pelican-300 focus:ring-4;
   }
 
+  .input-file {
+    @apply w-full rounded-2xl border border-black/5 bg-white px-3 py-2.5 text-xs text-ink-soft outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-pelican-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-pelican-700 hover:file:bg-pelican-100;
+  }
+
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full bg-pelican-50 px-3 py-1 text-xs font-medium text-pelican-700;
   }

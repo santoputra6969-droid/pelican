@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteHouse, saveHouse } from "@/app/admin/actions";
@@ -108,6 +109,14 @@ export function WargaManager({ houses }: { houses: House[] }) {
                 </td>
                 <td className="px-5 py-3">
                   <div className="flex justify-end gap-1.5">
+                    <Link
+                      href={`/admin/warga/${h.id}`}
+                      className="flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-pelican-700 transition hover:bg-pelican-50"
+                      aria-label="Data warga"
+                    >
+                      <Icon name="user" size={15} />
+                      Data
+                    </Link>
                     <button
                       onClick={() => {
                         setEditing(h);
@@ -159,6 +168,13 @@ export function WargaManager({ houses }: { houses: House[] }) {
                 {h.payIpl ? formatRupiah(h.iplAmount) : "Tidak bayar IPL"}
               </span>
               <div className="flex gap-1.5">
+                <Link
+                  href={`/admin/warga/${h.id}`}
+                  className="flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-pelican-700 hover:bg-pelican-50"
+                >
+                  <Icon name="user" size={15} />
+                  Data
+                </Link>
                 <button
                   onClick={() => {
                     setEditing(h);

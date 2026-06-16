@@ -1,0 +1,59 @@
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { TunggakanReport } from "@/components/admin/TunggakanReport";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminTunggakanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ block?: string }>;
+}) {
+  const sp = await searchParams;
+  const block = sp.block && sp.block !== "SEMUA" ? sp.block : null;
+
+  const houses = await prisma.house.findMany({
+    where: {
+      ...(block ? { block } : {}),
+      bills: { some: { status: "UNPAID" } },
+    },
+    include: {
+      bills: {
+        where: { status: "UNPAID" },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      },
+    },
+    orderBy: [{ block: "asc" }, { no: "asc" }],
+  });
+
+  const blocks = await prisma.house.findMany({
+    distinct: ["block"],
+    select: { block: true },
+    orderBy: { block: "asc" },
+  });
+
+  const rows = houses.map((h) => ({
+    id: h.id,
+    block: h.block,
+    no: h.no,
+    ownerName: h.ownerName,
+    months: h.bills.length,
+    total: h.bills.reduce((s, b) => s + b.amount, 0),
+    bills: h.bills.map((b) => ({ year: b.year, month: b.month, amount: b.amount })),
+  }));
+
+  return (
+    <div className="px-5 py-6 lg:px-8">
+      <AdminPageHeader
+        title="Tunggakan IPL"
+        subtitle="Daftar rumah yang menunggak iuran IPL"
+      />
+      <TunggakanReport
+        rows={rows}
+        blocks={blocks.map((b) => b.block)}
+        selectedBlock={block ?? "SEMUA"}
+        totalPiutang={rows.reduce((s, r) => s + r.total, 0)}
+      />
+    </div>
+  );
+}

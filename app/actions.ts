@@ -273,3 +273,111 @@ export async function createComplaint(
   }
 }
 
+/* -------------------------- Pengajuan Surat ----------------------------- */
+
+export type LetterResult =
+  | { ok: true }
+  | { ok: false; message: string }
+  | null;
+
+const LETTER_TYPES = ["PENGANTAR", "DOMISILI", "KETERANGAN", "LAINNYA"];
+
+export async function createLetterRequest(
+  _prev: LetterResult,
+  formData: FormData
+): Promise<LetterResult> {
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+
+  const applicant = String(formData.get("applicant") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const rawType = String(formData.get("type") ?? "PENGANTAR").toUpperCase();
+  const type = LETTER_TYPES.includes(rawType) ? rawType : "PENGANTAR";
+  const purpose = String(formData.get("purpose") ?? "").trim();
+
+  if (!applicant) return { ok: false, message: "Nama pemohon wajib diisi." };
+  if (purpose.length < 5)
+    return { ok: false, message: "Jelaskan keperluan minimal 5 karakter." };
+  if (purpose.length > 2000)
+    return { ok: false, message: "Keperluan terlalu panjang (maks 2000 karakter)." };
+
+  let houseLabel: string | null = null;
+  if (Number.isFinite(houseId) && houseId > 0) {
+    const house = await prisma.house.findUnique({ where: { id: houseId } });
+    if (house) houseLabel = `Blok ${house.block} / No. ${house.no}`;
+  }
+
+  try {
+    await prisma.letterRequest.create({
+      data: {
+        houseId: Number.isFinite(houseId) && houseId > 0 ? houseId : null,
+        houseLabel,
+        applicant,
+        phone,
+        type,
+        purpose,
+      },
+    });
+    revalidatePath("/surat");
+    revalidatePath("/admin/surat");
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Gagal mengirim pengajuan. Coba lagi." };
+  }
+}
+
+/* ------------------------------- Voting --------------------------------- */
+
+export type VoteResult =
+  | { ok: true }
+  | { ok: false; message: string }
+  | null;
+
+export async function castVote(
+  _prev: VoteResult,
+  formData: FormData
+): Promise<VoteResult> {
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+  if (!Number.isFinite(houseId) || houseId <= 0)
+    return { ok: false, message: "Pilih rumah dulu sebelum memberi suara." };
+
+  const voteId = Number(formData.get("voteId") ?? 0);
+  const optionId = Number(formData.get("optionId") ?? 0);
+  if (!voteId || !optionId)
+    return { ok: false, message: "Pilih salah satu opsi terlebih dahulu." };
+
+  const vote = await prisma.vote.findUnique({
+    where: { id: voteId },
+    include: { options: true },
+  });
+  if (!vote || !vote.active) return { ok: false, message: "Voting tidak aktif." };
+  if (vote.closesAt && vote.closesAt < new Date())
+    return { ok: false, message: "Voting sudah ditutup." };
+  if (!vote.options.some((o) => o.id === optionId))
+    return { ok: false, message: "Opsi tidak valid." };
+
+  const existing = await prisma.voteBallot.findUnique({
+    where: { voteId_houseId: { voteId, houseId } },
+  });
+  if (existing) return { ok: false, message: "Rumah ini sudah memberikan suara." };
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+
+  try {
+    await prisma.voteBallot.create({
+      data: {
+        voteId,
+        optionId,
+        houseId,
+        voterName: house?.ownerName ?? `Blok ${house?.block} No ${house?.no}`,
+      },
+    });
+    revalidatePath("/vote");
+    revalidatePath("/admin/vote");
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Gagal mengirim suara. Coba lagi." };
+  }
+}

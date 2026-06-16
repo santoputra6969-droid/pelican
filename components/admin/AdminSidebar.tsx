@@ -11,7 +11,13 @@ const nav: { label: string; href: string; icon: IconName }[] = [
   { label: "Informasi", href: "/admin/informasi", icon: "megaphone" },
   { label: "Banner", href: "/admin/banner", icon: "park" },
   { label: "Transaksi", href: "/admin/transaksi", icon: "receipt" },
+  { label: "Buku Kas", href: "/admin/bukukas", icon: "wallet" },
+  { label: "Tunggakan", href: "/admin/tunggakan", icon: "swap" },
   { label: "Pengaduan", href: "/admin/pengaduan", icon: "chat" },
+  { label: "Kelola Surat", href: "/admin/surat", icon: "send" },
+  { label: "Voting", href: "/admin/vote", icon: "check" },
+  { label: "Kontribusi", href: "/admin/kontribusi", icon: "heart" },
+  { label: "Arsip", href: "/admin/arsip", icon: "history" },
   { label: "Data Warga", href: "/admin/warga", icon: "user" },
 ];
 

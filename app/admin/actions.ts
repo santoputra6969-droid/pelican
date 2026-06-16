@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_COOKIE, signSession } from "@/lib/auth";
 import { requireAdmin } from "@/lib/session";
 import { formatRupiah } from "@/lib/format";
+import { saveUploadedFile, deleteStoredFile } from "@/lib/files";
 
 const ADMIN_COOKIE_OPTS = {
   httpOnly: true,
@@ -334,4 +335,312 @@ export async function deleteComplaint(formData: FormData): Promise<ActionResult>
   revalidatePath("/admin");
   return { ok: true, message: "Pengaduan dihapus." };
 }
+
+/* ------------------------- Pendataan Warga (KK/KTP) --------------------- */
+
+export async function saveResident(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  const houseId = Number(formData.get("houseId") ?? 0);
+  const role = String(formData.get("role") ?? "PEMILIK") === "PENGHUNI" ? "PENGHUNI" : "PEMILIK";
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const nik = String(formData.get("nik") ?? "").trim() || null;
+  const familyStatus = String(formData.get("familyStatus") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const active = formData.get("active") !== "off";
+
+  if (!houseId || !name)
+    return { ok: false, message: "Rumah & nama wajib diisi." };
+
+  const ktp = await saveUploadedFile(formData.get("ktpFile"), {
+    kind: "KTP",
+    createdBy: admin.username,
+  });
+  if (ktp && ktp.ok === false) return { ok: false, message: ktp.message };
+  const kk = await saveUploadedFile(formData.get("kkFile"), {
+    kind: "KK",
+    createdBy: admin.username,
+  });
+  if (kk && kk.ok === false) return { ok: false, message: kk.message };
+
+  if (id) {
+    const existing = await prisma.resident.findUnique({ where: { id } });
+    if (ktp?.ok) await deleteStoredFile(existing?.ktpFileId);
+    if (kk?.ok) await deleteStoredFile(existing?.kkFileId);
+    await prisma.resident.update({
+      where: { id },
+      data: {
+        houseId,
+        role,
+        name,
+        phone,
+        nik,
+        familyStatus,
+        note,
+        active,
+        ...(ktp?.ok ? { ktpFileId: ktp.id } : {}),
+        ...(kk?.ok ? { kkFileId: kk.id } : {}),
+      },
+    });
+  } else {
+    await prisma.resident.create({
+      data: {
+        houseId,
+        role,
+        name,
+        phone,
+        nik,
+        familyStatus,
+        note,
+        active,
+        ktpFileId: ktp?.ok ? ktp.id : null,
+        kkFileId: kk?.ok ? kk.id : null,
+        createdBy: admin.username,
+      },
+    });
+  }
+  revalidatePath("/admin/warga");
+  revalidatePath(`/admin/warga/${houseId}`);
+  return { ok: true, message: id ? "Data warga diperbarui." : "Data warga ditambahkan." };
+}
+
+export async function deleteResident(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return { ok: false, message: "Data tidak ditemukan." };
+  const existing = await prisma.resident.findUnique({ where: { id } });
+  await deleteStoredFile(existing?.ktpFileId);
+  await deleteStoredFile(existing?.kkFileId);
+  await prisma.resident.delete({ where: { id } });
+  revalidatePath("/admin/warga");
+  if (existing) revalidatePath(`/admin/warga/${existing.houseId}`);
+  return { ok: true, message: "Data warga dihapus." };
+}
+
+/* -------------------------------- Arsip --------------------------------- */
+
+const ARCHIVE_CATEGORIES = ["LAPORAN", "NOTULEN", "SK", "UMUM"];
+
+export async function saveArchive(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const title = String(formData.get("title") ?? "").trim();
+  const rawCat = String(formData.get("category") ?? "UMUM").toUpperCase();
+  const category = ARCHIVE_CATEGORIES.includes(rawCat) ? rawCat : "UMUM";
+  if (!title) return { ok: false, message: "Judul dokumen wajib diisi." };
+
+  const file = await saveUploadedFile(formData.get("file"), {
+    kind: "ARSIP",
+    createdBy: admin.username,
+  });
+  if (!file) return { ok: false, message: "File dokumen wajib diunggah." };
+  if (file.ok === false) return { ok: false, message: file.message };
+
+  await prisma.archive.create({
+    data: { title, category, fileId: file.id, createdBy: admin.username },
+  });
+  revalidatePath("/admin/arsip");
+  return { ok: true, message: "Dokumen arsip ditambahkan." };
+}
+
+export async function deleteArchive(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, message: "Dokumen tidak ditemukan." };
+  const existing = await prisma.archive.findUnique({ where: { id } });
+  await deleteStoredFile(existing?.fileId);
+  await prisma.archive.delete({ where: { id } });
+  revalidatePath("/admin/arsip");
+  return { ok: true, message: "Dokumen arsip dihapus." };
+}
+
+/* -------------------------------- Surat --------------------------------- */
+
+const LETTER_STATUSES = ["OPEN", "DIPROSES", "SELESAI", "DITOLAK"];
+
+export async function updateLetter(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return { ok: false, message: "Pengajuan tidak ditemukan." };
+
+  const rawStatus = String(formData.get("status") ?? "").toUpperCase();
+  const status = LETTER_STATUSES.includes(rawStatus) ? rawStatus : "OPEN";
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  const result = await saveUploadedFile(formData.get("resultFile"), {
+    kind: "LAMPIRAN",
+    createdBy: admin.username,
+  });
+  if (result && result.ok === false)
+    return { ok: false, message: result.message };
+
+  if (result?.ok) {
+    const existing = await prisma.letterRequest.findUnique({ where: { id } });
+    await deleteStoredFile(existing?.resultFileId);
+  }
+
+  await prisma.letterRequest.update({
+    where: { id },
+    data: {
+      status,
+      note,
+      handledBy: admin.username,
+      ...(result?.ok ? { resultFileId: result.id } : {}),
+    },
+  });
+  revalidatePath("/admin/surat");
+  revalidatePath("/admin");
+  revalidatePath("/surat");
+  return { ok: true, message: "Pengajuan surat diperbarui." };
+}
+
+export async function deleteLetter(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return { ok: false, message: "Pengajuan tidak ditemukan." };
+  const existing = await prisma.letterRequest.findUnique({ where: { id } });
+  await deleteStoredFile(existing?.resultFileId);
+  await prisma.letterRequest.delete({ where: { id } });
+  revalidatePath("/admin/surat");
+  revalidatePath("/admin");
+  return { ok: true, message: "Pengajuan surat dihapus." };
+}
+
+/* --------------------------------- Vote --------------------------------- */
+
+export async function saveVote(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  const question = String(formData.get("question") ?? "").trim();
+  const detail = String(formData.get("detail") ?? "").trim() || null;
+  const closesRaw = String(formData.get("closesAt") ?? "").trim();
+  const closesAt = closesRaw ? new Date(closesRaw) : null;
+  const options = String(formData.get("options") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (!question) return { ok: false, message: "Pertanyaan voting wajib diisi." };
+
+  if (id) {
+    // edit: hanya ubah pertanyaan/detail/closesAt (opsi tetap, hindari hapus suara)
+    await prisma.vote.update({
+      where: { id },
+      data: { question, detail, closesAt },
+    });
+    revalidatePath("/admin/vote");
+    revalidatePath("/vote");
+    return { ok: true, message: "Voting diperbarui." };
+  }
+
+  if (options.length < 2)
+    return { ok: false, message: "Minimal 2 opsi (satu per baris)." };
+
+  await prisma.vote.create({
+    data: {
+      question,
+      detail,
+      closesAt,
+      createdBy: admin.username,
+      options: {
+        create: options.map((label, i) => ({ label, order: i })),
+      },
+    },
+  });
+  revalidatePath("/admin/vote");
+  revalidatePath("/vote");
+  return { ok: true, message: "Voting dibuat." };
+}
+
+export async function toggleVote(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return { ok: false, message: "Voting tidak ditemukan." };
+  const vote = await prisma.vote.findUnique({ where: { id } });
+  if (!vote) return { ok: false, message: "Voting tidak ditemukan." };
+  await prisma.vote.update({ where: { id }, data: { active: !vote.active } });
+  revalidatePath("/admin/vote");
+  revalidatePath("/vote");
+  return {
+    ok: true,
+    message: vote.active ? "Voting ditutup." : "Voting diaktifkan.",
+  };
+}
+
+export async function deleteVote(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = Number(formData.get("id") ?? 0);
+  if (id) await prisma.vote.delete({ where: { id } });
+  revalidatePath("/admin/vote");
+  revalidatePath("/vote");
+  return { ok: true, message: "Voting dihapus." };
+}
+
+/* ----------------------------- Kontribusi ------------------------------- */
+
+export async function saveContribution(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const targetRaw = Number(formData.get("target") ?? 0);
+  const target = Number.isFinite(targetRaw) && targetRaw > 0 ? Math.round(targetRaw) : null;
+  const active = formData.get("active") !== "off";
+  if (!title) return { ok: false, message: "Judul kontribusi wajib diisi." };
+
+  if (id) {
+    await prisma.contribution.update({
+      where: { id },
+      data: { title, description, target, active },
+    });
+  } else {
+    await prisma.contribution.create({
+      data: { title, description, target, active, createdBy: admin.username },
+    });
+  }
+  revalidatePath("/admin/kontribusi");
+  revalidatePath("/kontribusi");
+  return { ok: true, message: id ? "Kontribusi diperbarui." : "Kontribusi dibuat." };
+}
+
+export async function deleteContribution(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (id) await prisma.contribution.delete({ where: { id } });
+  revalidatePath("/admin/kontribusi");
+  revalidatePath("/kontribusi");
+  return { ok: true, message: "Kontribusi dihapus." };
+}
+
+export async function addContributionEntry(
+  formData: FormData
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const contributionId = String(formData.get("contributionId") ?? "");
+  const donorName = String(formData.get("donorName") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+  if (!contributionId) return { ok: false, message: "Kontribusi tidak ditemukan." };
+  if (!Number.isFinite(amount) || amount <= 0)
+    return { ok: false, message: "Nominal tidak valid." };
+
+  await prisma.contributionEntry.create({
+    data: { contributionId, donorName, note, amount, createdBy: admin.username },
+  });
+  revalidatePath("/admin/kontribusi");
+  revalidatePath("/kontribusi");
+  return { ok: true, message: `Setoran dicatat: ${formatRupiah(amount)}.` };
+}
+
+export async function deleteContributionEntry(
+  formData: FormData
+): Promise<ActionResult> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (id) await prisma.contributionEntry.delete({ where: { id } });
+  revalidatePath("/admin/kontribusi");
+  revalidatePath("/kontribusi");
+  return { ok: true, message: "Setoran dihapus." };
+}
+
 
