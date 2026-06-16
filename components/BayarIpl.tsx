@@ -26,14 +26,16 @@ export function BayarIpl({
   paidBills?: BillLite[];
 }) {
   const [tab, setTab] = useState<"aktif" | "terbayar">("aktif");
-  const [selectedId, setSelectedId] = useState<number>(bills[0]?.id ?? 0);
+  const [selectedIds, setSelectedIds] = useState<number[]>(
+    bills[0] ? [bills[0].id] : []
+  );
   const [method, setMethod] = useState("VA");
   const [state, formAction] = useActionState<PayResult, FormData>(
     payBill,
     null
   );
 
-  const selected = bills.find((b) => b.id === selectedId) ?? bills[0];
+  const selectedBills = bills.filter((b) => selectedIds.includes(b.id));
 
   return (
     <>
@@ -106,9 +108,9 @@ export function BayarIpl({
       ) : (
         <ActiveBills
           bills={bills}
-          selectedId={selectedId}
-          setSelectedId={setSelectedId}
-          selected={selected}
+          selectedIds={selectedIds}
+          setSelectedIds={setSelectedIds}
+          selectedBills={selectedBills}
           method={method}
           setMethod={setMethod}
           formAction={formAction}
@@ -121,35 +123,69 @@ export function BayarIpl({
 
 function ActiveBills({
   bills,
-  selectedId,
-  setSelectedId,
-  selected,
+  selectedIds,
+  setSelectedIds,
+  selectedBills,
   method,
   setMethod,
   formAction,
   state,
 }: {
   bills: BillLite[];
-  selectedId: number;
-  setSelectedId: (id: number) => void;
-  selected: BillLite | undefined;
+  selectedIds: number[];
+  setSelectedIds: (ids: number[]) => void;
+  selectedBills: BillLite[];
   method: string;
   setMethod: (m: string) => void;
   formAction: (formData: FormData) => void;
   state: PayResult;
 }) {
+  const total = selectedBills.reduce((sum, b) => sum + b.amount, 0);
+  const allSelected = bills.length > 0 && selectedIds.length === bills.length;
+
+  const toggleBill = (id: number) => {
+    setSelectedIds(
+      selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id]
+    );
+  };
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? [] : bills.map((b) => b.id));
+  };
+
   return (
     <>
       {/* Tagihan list */}
       <section className="mt-5 px-5">
-        <h2 className="mb-3 text-base font-bold text-ink">Tagihan IPL</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-bold text-ink">Tagihan IPL</h2>
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="flex items-center gap-2 text-xs font-bold text-pelican-700"
+          >
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                allSelected
+                  ? "border-pelican-500 bg-pelican-500 text-white"
+                  : "border-black/20"
+              }`}
+            >
+              {allSelected && <Icon name="check" size={12} />}
+            </span>
+            Pilih Semua
+          </button>
+        </div>
         <div className="space-y-3">
           {bills.map((bill) => {
-            const active = bill.id === selectedId;
+            const active = selectedIds.includes(bill.id);
             return (
               <button
                 key={bill.id}
-                onClick={() => setSelectedId(bill.id)}
+                type="button"
+                onClick={() => toggleBill(bill.id)}
                 className={`card w-full p-4 text-left transition ${
                   active ? "ring-2 ring-pelican-500" : ""
                 }`}
@@ -157,7 +193,7 @@ function ActiveBills({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                      className={`flex h-5 w-5 items-center justify-center rounded-md border ${
                         active
                           ? "border-pelican-500 bg-pelican-500 text-white"
                           : "border-black/15"
@@ -188,24 +224,34 @@ function ActiveBills({
       <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-bold text-ink">Rincian Tagihan</h2>
         <div className="card p-5">
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-ink-soft">
-                Iuran IPL{" "}
-                {selected ? formatPeriod(selected.year, selected.month) : ""}
-              </span>
-              <span className="font-semibold text-ink">
-                {formatRupiah(selected?.amount ?? 0)}
-              </span>
+          {selectedBills.length === 0 ? (
+            <p className="text-center text-sm text-ink-faint">
+              Pilih tagihan yang ingin dibayar.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {selectedBills.map((bill) => (
+                <div
+                  key={bill.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-ink-soft">
+                    Iuran IPL {formatPeriod(bill.year, bill.month)}
+                  </span>
+                  <span className="font-semibold text-ink">
+                    {formatRupiah(bill.amount)}
+                  </span>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
           <div className="my-4 border-t border-dashed border-black/10" />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-ink-soft">
-              Total Bayar
+              Total Bayar ({selectedBills.length} tagihan)
             </span>
             <span className="text-xl font-extrabold text-pelican-700">
-              {formatRupiah(selected?.amount ?? 0)}
+              {formatRupiah(total)}
             </span>
           </div>
         </div>
@@ -248,9 +294,9 @@ function ActiveBills({
 
       {/* Pay bar */}
       <form action={formAction} className="sticky bottom-20 z-20 mt-6 px-5">
-        <input type="hidden" name="billId" value={selectedId} />
+        <input type="hidden" name="billIds" value={selectedIds.join(",")} />
         <input type="hidden" name="method" value={method} />
-        <PayButton amount={selected?.amount ?? 0} />
+        <PayButton amount={total} disabled={selectedBills.length === 0} />
         {state && !state.ok && (
           <p className="mt-2 text-center text-xs font-semibold text-red-500">
             {state.message}
@@ -269,8 +315,13 @@ function ActiveBills({
               Pembayaran Berhasil
             </h3>
             <p className="mt-1 text-sm text-ink-soft">
-              IPL {state.period} sebesar {formatRupiah(state.amount)} telah
-              dibayar.
+              {state.count > 1
+                ? `${state.count} tagihan IPL sebesar ${formatRupiah(
+                    state.amount
+                  )} telah dibayar.`
+                : `IPL ${state.period} sebesar ${formatRupiah(
+                    state.amount
+                  )} telah dibayar.`}
             </p>
             <a href="/transaksi" className="btn-primary mt-5 w-full">
               Lihat Transaksi
@@ -288,10 +339,20 @@ function ActiveBills({
   );
 }
 
-function PayButton({ amount }: { amount: number }) {
+function PayButton({
+  amount,
+  disabled,
+}: {
+  amount: number;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn-primary w-full">
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="btn-primary w-full"
+    >
       {pending ? "Memproses..." : `Bayar ${formatRupiah(amount)}`}
     </button>
   );

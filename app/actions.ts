@@ -32,7 +32,7 @@ export async function clearHouse() {
 }
 
 export type PayResult =
-  | { ok: true; period: string; amount: number }
+  | { ok: true; period: string; amount: number; count: number }
   | { ok: false; message: string }
   | null;
 
@@ -40,47 +40,61 @@ export async function payBill(
   _prev: PayResult,
   formData: FormData
 ): Promise<PayResult> {
-  const billId = Number(formData.get("billId") ?? "");
+  const rawIds = String(formData.get("billIds") ?? formData.get("billId") ?? "");
+  const billIds = rawIds
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
 
   const store = await cookies();
   const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
-  if (!houseId || !billId) return { ok: false, message: "Sesi tidak valid." };
+  if (!houseId || billIds.length === 0)
+    return { ok: false, message: "Sesi tidak valid." };
 
-  const bill = await prisma.bill.findUnique({ where: { id: billId } });
-  if (!bill || bill.houseId !== houseId)
+  const bills = await prisma.bill.findMany({
+    where: { id: { in: billIds }, houseId },
+    orderBy: [{ year: "asc" }, { month: "asc" }],
+  });
+  if (bills.length === 0)
     return { ok: false, message: "Tagihan tidak ditemukan." };
-  if (bill.status === "PAID")
+
+  const unpaid = bills.filter((b) => b.status !== "PAID");
+  if (unpaid.length === 0)
     return { ok: false, message: "Tagihan sudah dibayar." };
 
   const house = await prisma.house.findUnique({ where: { id: houseId } });
   if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
 
-  const periodLabel = formatPeriod(bill.year, bill.month);
   const actor = house.ownerName ?? `Blok ${house.block} No ${house.no}`;
-  const notes = `PEMBAYARAN IPL ${house.block} No ${house.no} Untuk bulan ${bill.month} dan tahun ${bill.year}.`;
+  const total = unpaid.reduce((sum, b) => sum + b.amount, 0);
 
   await prisma.$transaction(async (tx) => {
-    const trx = await tx.transaction.create({
-      data: {
-        category: "UTAMA",
-        type: "IPL",
-        notes,
-        amount: bill.amount,
-        mutation: "DEBIT", // pemasukan kas
-        createdBy: actor,
-      },
-    });
-    await tx.bill.update({
-      where: { id: bill.id },
-      data: { status: "PAID", transactionId: trx.id, updatedBy: actor },
-    });
+    let lastTxId = "";
+    for (const bill of unpaid) {
+      const notes = `PEMBAYARAN IPL ${house.block} No ${house.no} Untuk bulan ${bill.month} dan tahun ${bill.year}.`;
+      const trx = await tx.transaction.create({
+        data: {
+          category: "UTAMA",
+          type: "IPL",
+          notes,
+          amount: bill.amount,
+          mutation: "DEBIT", // pemasukan kas
+          createdBy: actor,
+        },
+      });
+      await tx.bill.update({
+        where: { id: bill.id },
+        data: { status: "PAID", transactionId: trx.id, updatedBy: actor },
+      });
+      lastTxId = String(trx.id);
+    }
     const bal = await tx.balance.findFirst({ orderBy: { id: "asc" } });
     if (bal) {
       await tx.balance.update({
         where: { id: bal.id },
         data: {
-          balance: { increment: bill.amount },
-          lastTxId: String(trx.id),
+          balance: { increment: total },
+          lastTxId,
           updatedBy: actor,
         },
       });
@@ -92,5 +106,10 @@ export async function payBill(
   revalidatePath("/transaksi");
   revalidatePath("/profil");
 
-  return { ok: true, period: periodLabel, amount: bill.amount };
+  const periodLabel =
+    unpaid.length === 1
+      ? formatPeriod(unpaid[0].year, unpaid[0].month)
+      : `${unpaid.length} tagihan`;
+
+  return { ok: true, period: periodLabel, amount: total, count: unpaid.length };
 }
