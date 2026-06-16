@@ -22,6 +22,25 @@ const toFloat = (v: unknown, fallback = 0) => {
 const date = (v: unknown) => (v ? new Date(String(v)) : new Date());
 const bool = (v: unknown) => String(v) === "1" || v === true;
 
+// Setelah insert data dengan ID eksplisit, sequence auto-increment Postgres
+// tidak ikut maju. Akibatnya INSERT baru memakai id=1 → bentrok unique.
+// Fungsi ini menyetel ulang sequence ke MAX(id)+1 untuk tiap tabel terkait.
+// Aman dipanggil berulang & otomatis dilewati di SQLite.
+async function fixSequences() {
+  const tables = ["House", "Bill", "Transaction", "Banner", "TransactionType"];
+  for (const table of tables) {
+    try {
+      await prisma.$executeRawUnsafe(
+        `SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), (SELECT COALESCE(MAX(id), 0) FROM "${table}") + 1, false)`
+      );
+    } catch (e) {
+      // SQLite / tabel tanpa sequence → abaikan.
+      console.log(`  (lewati reset sequence ${table})`);
+    }
+  }
+  console.log("  ✓ sequence auto-increment disinkronkan");
+}
+
 async function main() {
   console.log("🌱 Seeding database from scraped Puri Pelican data...");
 
@@ -46,6 +65,7 @@ async function main() {
     console.log(
       `  ⏭️  ${existingHouses} rumah sudah ada — lewati reseed (data dipertahankan).`
     );
+    await fixSequences();
     return;
   }
 
@@ -210,6 +230,8 @@ async function main() {
       })),
   });
   console.log(`  ✓ ${seenType.size} transaction types`);
+
+  await fixSequences();
 
   console.log("✅ Seed complete. Admin login → admin / admin123");
 }
