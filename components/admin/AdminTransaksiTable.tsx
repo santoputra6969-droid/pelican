@@ -13,6 +13,7 @@ type Row = {
   amount: number;
   mutation: string;
   createdBy: string | null;
+  image: string | null;
   date: string;
 };
 
@@ -353,6 +354,19 @@ export function AdminTransaksiTable({
                         {t.notes}
                       </p>
                     )}
+                    <p className="mt-1 text-[11px] text-ink-soft">
+                      dibuat oleh: {t.createdBy ?? "—"}
+                    </p>
+                    {t.image && (
+                      <a
+                        href={`/admin/files/${t.image}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-semibold text-pelican-700 underline"
+                      >
+                        Lihat Gambar
+                      </a>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <span
@@ -401,6 +415,16 @@ export function AdminTransaksiTable({
                   <p className="mt-1 text-[11px] leading-snug text-ink-faint">
                     {t.notes ?? "Tanpa catatan"}
                   </p>
+                  {t.image && (
+                    <a
+                      href={`/admin/files/${t.image}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-[11px] font-semibold text-pelican-700 underline"
+                    >
+                      Lihat Gambar
+                    </a>
+                  )}
                 </div>
                 <div className="shrink-0 text-right">
                   <p className={`text-sm font-bold ${amountColor}`}>
@@ -417,7 +441,7 @@ export function AdminTransaksiTable({
                   <p className="mt-0.5 leading-snug">{formatDateTime(t.date)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-ink-faint">Petugas</p>
+                  <p className="text-[10px] text-ink-faint">Dibuat oleh</p>
                   <p className="mt-0.5 leading-snug">{t.createdBy ?? "—"}</p>
                 </div>
               </div>

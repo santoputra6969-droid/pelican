@@ -178,10 +178,17 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
   const category = String(formData.get("category") ?? "UTAMA") === "PKK" ? "PKK" : "UTAMA";
   const type = String(formData.get("type") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const author = String(formData.get("author") ?? "").trim() || admin.username;
   const amount = Math.round(Number(formData.get("amount") ?? 0));
 
   if (!type || !Number.isFinite(amount) || amount <= 0)
     return { ok: false, message: "Jenis & nominal transaksi wajib diisi." };
+
+  const image = await saveUploadedFile(formData.get("imageFile"), {
+    kind: "LAMPIRAN",
+    createdBy: admin.username,
+  });
+  if (image && image.ok === false) return { ok: false, message: image.message };
 
   const mutation = kind === "MASUK" ? "DEBIT" : "KREDIT";
   const delta = mutation === "DEBIT" ? amount : -amount;
@@ -194,7 +201,8 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
         notes,
         amount,
         mutation,
-        createdBy: admin.username,
+        image: image?.ok ? image.id : null,
+        createdBy: author,
       },
     });
 
@@ -207,12 +215,12 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
             ? {
                 balancePkk: { increment: delta },
                 lastTxId: String(trx.id),
-                updatedBy: admin.username,
+                updatedBy: author,
               }
             : {
                 balance: { increment: delta },
                 lastTxId: String(trx.id),
-                updatedBy: admin.username,
+                updatedBy: author,
               },
       });
     }

@@ -147,6 +147,7 @@ export default async function AdminTransaksiPage({
           amount: t.amount,
           mutation: t.mutation,
           createdBy: t.createdBy,
+          image: t.image,
           date: t.createdAt.toISOString(),
         }))}
       />

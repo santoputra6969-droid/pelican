@@ -140,6 +140,29 @@ export function AddTransaksiForm() {
             />
           </div>
 
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
+              Author (opsional)
+            </label>
+            <input
+              name="author"
+              placeholder="Kosongkan untuk user admin login"
+              className="input"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
+              Upload Gambar (opsional)
+            </label>
+            <input
+              name="imageFile"
+              type="file"
+              accept="image/*"
+              className="input-file"
+            />
+          </div>
+
           <SubmitButton kind={kind} />
         </ActionForm>
       </Modal>
