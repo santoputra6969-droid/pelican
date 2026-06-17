@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { saveResident } from "@/app/admin/actions";
+import { Icon } from "@/components/Icon";
+import { saveResidentPengkinian } from "@/app/admin/actions";
 
 type HouseOption = {
   id: number;
@@ -34,6 +35,11 @@ const FAMILY_STATUSES = [
 
 const RELIGIONS = ["ISLAM", "KRISTEN", "KATHOLIK", "BUDDHA", "HINDU", "KHONGHUCU"];
 
+type MemberRow = {
+  relation: "ANAK" | "KERABAT";
+  name: string;
+};
+
 export function AdminResidentLegacyForm({ houses }: { houses: HouseOption[] }) {
   const blocks = useMemo(
     () => [...new Set(houses.map((h) => h.block))].sort((a, b) => a.localeCompare(b)),
@@ -43,6 +49,7 @@ export function AdminResidentLegacyForm({ houses }: { houses: HouseOption[] }) {
   const [block, setBlock] = useState(blocks[0] ?? "");
   const [relation, setRelation] = useState("PEMILIK");
   const [religion, setReligion] = useState("ISLAM");
+  const [members, setMembers] = useState<MemberRow[]>([]);
 
   const houseOptions = useMemo(
     () =>
@@ -57,11 +64,11 @@ export function AdminResidentLegacyForm({ houses }: { houses: HouseOption[] }) {
   const selectedHouse = houseOptions.find((h) => h.id === houseId) ?? houseOptions[0] ?? null;
 
   return (
-    <ActionForm action={saveResident} className="card space-y-4 p-5">
+    <ActionForm action={saveResidentPengkinian} className="card space-y-4 p-5">
       <input type="hidden" name="houseId" value={selectedHouse?.id ?? 0} />
       <input type="hidden" name="role" value={relation} />
       <input type="hidden" name="note" value={`AGAMA:${religion};SUMBER:ADMIN_PENGKINIAN`} />
-      <input type="hidden" name="active" value="on" />
+      <input type="hidden" name="members" value={JSON.stringify(members)} />
 
       <div className="rounded-xl border border-[#1f97ef] bg-[#e8f4ff] px-3 py-2.5 text-sm leading-relaxed text-[#024b7d]">
         Kami sangat menghargai privasi anda, data yang anda submit tidak akan dapat diakses oleh publik,
@@ -164,6 +171,65 @@ export function AdminResidentLegacyForm({ houses }: { houses: HouseOption[] }) {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="rounded-xl border border-black/10 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-ink">Anggota Rumah (Opsional)</p>
+          <button
+            type="button"
+            onClick={() =>
+              setMembers((prev) => [...prev, { relation: "ANAK", name: "" }])
+            }
+            className="inline-flex items-center gap-1 rounded-lg bg-pelican-50 px-2.5 py-1 text-xs font-semibold text-pelican-700"
+          >
+            <Icon name="plus" size={14} /> Tambah
+          </button>
+        </div>
+
+        {members.length === 0 ? (
+          <p className="text-xs text-ink-faint">Belum ada anggota tambahan.</p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m, idx) => (
+              <div key={`member-${idx}`} className="grid grid-cols-[120px_1fr_auto] gap-2">
+                <select
+                  value={m.relation}
+                  onChange={(e) => {
+                    const next = [...members];
+                    next[idx] = {
+                      ...next[idx],
+                      relation: e.target.value === "KERABAT" ? "KERABAT" : "ANAK",
+                    };
+                    setMembers(next);
+                  }}
+                  className="input"
+                >
+                  <option value="ANAK">Anak</option>
+                  <option value="KERABAT">Kerabat</option>
+                </select>
+                <input
+                  value={m.name}
+                  onChange={(e) => {
+                    const next = [...members];
+                    next[idx] = { ...next[idx], name: e.target.value };
+                    setMembers(next);
+                  }}
+                  placeholder="Nama anggota"
+                  className="input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMembers((prev) => prev.filter((_, i) => i !== idx))}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-red-500 hover:bg-red-50"
+                  aria-label="Hapus anggota"
+                >
+                  <Icon name="plus" size={16} className="rotate-45" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

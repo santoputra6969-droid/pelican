@@ -10,6 +10,11 @@ type HouseOption = {
   no: string;
 };
 
+type MemberRow = {
+  relation: "ANAK" | "KERABAT";
+  name: string;
+};
+
 const RELATIONS = [
   { value: "PEMILIK", label: "Pemilik Rumah" },
   { value: "PENGHUNI", label: "Pengontrak" },
@@ -42,6 +47,7 @@ export function ResidentForm({
   defaultRelation,
   defaultFamilyStatus,
   defaultReligion,
+  defaultMembers,
 }: {
   houses: HouseOption[];
   selectedBlock: string;
@@ -51,6 +57,7 @@ export function ResidentForm({
   defaultRelation?: string;
   defaultFamilyStatus?: string;
   defaultReligion?: string;
+  defaultMembers?: MemberRow[];
 }) {
   const [state, formAction] = useActionState<ResidentFormResult, FormData>(
     submitResidentForm,
@@ -59,6 +66,7 @@ export function ResidentForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [block, setBlock] = useState(selectedBlock);
   const [no, setNo] = useState(selectedNo);
+  const [members, setMembers] = useState<MemberRow[]>(defaultMembers ?? []);
 
   const blocks = useMemo(
     () => [...new Set(houses.map((h) => h.block))].sort((a, b) => a.localeCompare(b)),
@@ -85,11 +93,14 @@ export function ResidentForm({
       formRef.current?.reset();
       setBlock(selectedBlock);
       setNo(selectedNo);
+      setMembers(defaultMembers ?? []);
     }
-  }, [state, selectedBlock, selectedNo]);
+  }, [state, selectedBlock, selectedNo, defaultMembers]);
 
   return (
     <form ref={formRef} action={formAction} className="card space-y-4 p-5">
+      <input type="hidden" name="members" value={JSON.stringify(members)} />
+
       <div className="rounded-xl border border-[#1f97ef] bg-[#e8f4ff] px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
         Kami sangat menghargai privasi Anda. Data yang di-submit tidak dapat diakses publik,
         dan hanya digunakan pengurus RT untuk pendataan administratif digital.
@@ -192,6 +203,63 @@ export function ResidentForm({
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="rounded-xl border border-black/10 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-ink">Anggota Rumah (Opsional)</p>
+          <button
+            type="button"
+            onClick={() => setMembers((prev) => [...prev, { relation: "ANAK", name: "" }])}
+            className="inline-flex items-center gap-1 rounded-lg bg-pelican-50 px-2.5 py-1 text-xs font-semibold text-pelican-700"
+          >
+            <Icon name="plus" size={14} /> Tambah
+          </button>
+        </div>
+
+        {members.length === 0 ? (
+          <p className="text-xs text-ink-faint">Belum ada anggota tambahan.</p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((m, idx) => (
+              <div key={`member-${idx}`} className="grid grid-cols-[120px_1fr_auto] gap-2">
+                <select
+                  value={m.relation}
+                  onChange={(e) => {
+                    const next = [...members];
+                    next[idx] = {
+                      ...next[idx],
+                      relation: e.target.value === "KERABAT" ? "KERABAT" : "ANAK",
+                    };
+                    setMembers(next);
+                  }}
+                  className="input"
+                >
+                  <option value="ANAK">Anak</option>
+                  <option value="KERABAT">Kerabat</option>
+                </select>
+                <input
+                  value={m.name}
+                  onChange={(e) => {
+                    const next = [...members];
+                    next[idx] = { ...next[idx], name: e.target.value };
+                    setMembers(next);
+                  }}
+                  placeholder="Nama anggota"
+                  className="input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMembers((prev) => prev.filter((_, i) => i !== idx))}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg text-red-500 hover:bg-red-50"
+                  aria-label="Hapus anggota"
+                >
+                  <Icon name="plus" size={16} className="rotate-45" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {state && !state.ok && (

@@ -177,7 +177,13 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
   const kind = String(formData.get("kind") ?? "KELUAR"); // MASUK | KELUAR
   const category = String(formData.get("category") ?? "UTAMA") === "PKK" ? "PKK" : "UTAMA";
   const type = String(formData.get("type") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const rawNotes = String(formData.get("notes") ?? "").trim();
+  const isTest = String(formData.get("isTest") ?? "") === "on";
+  const notes = isTest
+    ? rawNotes
+      ? `[TEST] ${rawNotes.replace(/^\[TEST\]\s*/i, "")}`
+      : "[TEST]"
+    : rawNotes || null;
   const author = String(formData.get("author") ?? "").trim() || admin.username;
   const amount = Math.round(Number(formData.get("amount") ?? 0));
 
@@ -453,6 +459,116 @@ export async function saveResident(formData: FormData): Promise<ActionResult> {
   revalidatePath("/admin/warga");
   revalidatePath(`/admin/warga/${houseId}`);
   return { ok: true, message: id ? "Data warga diperbarui." : "Data warga ditambahkan." };
+}
+
+export async function saveResidentPengkinian(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const houseId = Number(formData.get("houseId") ?? 0);
+  const role = String(formData.get("role") ?? "PEMILIK") === "PENGHUNI" ? "PENGHUNI" : "PEMILIK";
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const familyStatus = String(formData.get("familyStatus") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+  const membersRaw = String(formData.get("members") ?? "[]");
+
+  if (!houseId || !name || !phone || !familyStatus) {
+    return { ok: false, message: "Data kepala keluarga wajib diisi lengkap." };
+  }
+
+  let membersParsed: unknown = [];
+  try {
+    membersParsed = JSON.parse(membersRaw);
+  } catch {
+    return { ok: false, message: "Format anggota rumah tidak valid." };
+  }
+
+  const members = Array.isArray(membersParsed)
+    ? membersParsed
+        .map((m) => ({
+          relation: String((m as { relation?: unknown }).relation ?? "").toUpperCase(),
+          name: String((m as { name?: unknown }).name ?? "").trim(),
+        }))
+        .filter((m) => m.name.length > 0)
+    : [];
+
+  if (members.some((m) => m.relation !== "ANAK" && m.relation !== "KERABAT")) {
+    return { ok: false, message: "Relasi anggota hanya boleh Anak atau Kerabat." };
+  }
+  if (members.length > 30) {
+    return { ok: false, message: "Maksimal 30 anggota rumah per pengkinian." };
+  }
+
+  const kk = await saveUploadedFile(formData.get("kkFile"), {
+    kind: "KK",
+    createdBy: admin.username,
+  });
+  if (!kk) return { ok: false, message: "File Kartu Keluarga wajib diunggah." };
+  if (kk.ok === false) return { ok: false, message: kk.message };
+
+  const headCreatedBy = `pengkinian:${houseId}`;
+  const memberCreatedBy = `pengkinian:${houseId}:anggota`;
+
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.resident.findFirst({
+      where: { houseId, createdBy: headCreatedBy },
+      orderBy: { id: "asc" },
+    });
+
+    if (existing) {
+      await deleteStoredFile(existing.kkFileId);
+      await tx.resident.update({
+        where: { id: existing.id },
+        data: {
+          role,
+          name,
+          phone,
+          familyStatus,
+          note,
+          active: true,
+          kkFileId: kk.id,
+        },
+      });
+    } else {
+      await tx.resident.create({
+        data: {
+          houseId,
+          role,
+          name,
+          phone,
+          familyStatus,
+          note,
+          active: true,
+          kkFileId: kk.id,
+          createdBy: headCreatedBy,
+        },
+      });
+    }
+
+    await tx.resident.deleteMany({
+      where: { houseId, createdBy: memberCreatedBy },
+    });
+
+    if (members.length > 0) {
+      await tx.resident.createMany({
+        data: members.map((m) => ({
+          houseId,
+          role: "PENGHUNI",
+          name: m.name,
+          phone: null,
+          nik: null,
+          familyStatus: m.relation,
+          active: true,
+          note: `SUMBER:ADMIN_PENGKINIAN;RELASI:${m.relation}`,
+          createdBy: memberCreatedBy,
+        })),
+      });
+    }
+  });
+
+  revalidatePath("/admin/warga");
+  revalidatePath(`/admin/warga/${houseId}`);
+  revalidatePath("/admin/warga/pengkinian");
+  return { ok: true, message: "Pengkinian data warga berhasil disimpan." };
 }
 
 export async function deleteResident(formData: FormData): Promise<ActionResult> {

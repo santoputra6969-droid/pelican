@@ -7,6 +7,12 @@ import { getSelectedHouse } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+function parseRelation(note: string | null) {
+  if (!note) return "ANAK" as const;
+  const match = note.match(/RELASI:([A-Z_]+)/);
+  return match?.[1] === "KERABAT" ? ("KERABAT" as const) : ("ANAK" as const);
+}
+
 function parseReligion(note: string | null) {
   if (!note) return "";
   const match = note.match(/AGAMA:([A-Z]+)/);
@@ -17,7 +23,7 @@ export default async function ResidentFormPage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
 
-  const [houses, existing] = await Promise.all([
+  const [houses, existing, members] = await Promise.all([
     prisma.house.findMany({
       select: { block: true, no: true },
       orderBy: [{ block: "asc" }, { no: "asc" }],
@@ -32,6 +38,11 @@ export default async function ResidentFormPage() {
         familyStatus: true,
         note: true,
       },
+    }),
+    prisma.resident.findMany({
+      where: { houseId: house.id, createdBy: `warga:${house.id}:anggota` },
+      orderBy: { id: "asc" },
+      select: { name: true, note: true },
     }),
   ]);
 
@@ -49,6 +60,10 @@ export default async function ResidentFormPage() {
           defaultRelation={existing?.role ?? "PEMILIK"}
           defaultFamilyStatus={existing?.familyStatus ?? ""}
           defaultReligion={parseReligion(existing?.note ?? null)}
+          defaultMembers={members.map((m) => ({
+            relation: parseRelation(m.note),
+            name: m.name,
+          }))}
         />
       </section>
 

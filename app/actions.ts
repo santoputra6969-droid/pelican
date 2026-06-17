@@ -287,6 +287,11 @@ export type ResidentFormResult =
   | { ok: false; message: string }
   | null;
 
+type ResidentMemberInput = {
+  relation: "ANAK" | "KERABAT";
+  name: string;
+};
+
 const RESIDENT_RELATIONS = ["PEMILIK", "PENGHUNI"] as const;
 const RESIDENT_STATUSES = [
   "BELUM_KAWIN",
@@ -342,6 +347,7 @@ export async function submitResidentForm(
   )
     ? religionRaw
     : "";
+  const membersRaw = String(formData.get("members") ?? "[]");
 
   if (!block || !no || !name || !phone || !familyStatus || !religion) {
     return { ok: false, message: "Semua field wajib harus diisi." };
@@ -366,34 +372,81 @@ export async function submitResidentForm(
     orderBy: { id: "asc" },
   });
 
-  const note = `AGAMA:${religion};SUMBER:WARGA_FORM`;
-
-  if (existing) {
-    await prisma.resident.update({
-      where: { id: existing.id },
-      data: {
-        role: relation,
-        name,
-        phone,
-        familyStatus,
-        note,
-        active: true,
-      },
-    });
-  } else {
-    await prisma.resident.create({
-      data: {
-        houseId: selectedHouseId,
-        role: relation,
-        name,
-        phone,
-        familyStatus,
-        note,
-        active: true,
-        createdBy: `warga:${selectedHouseId}`,
-      },
-    });
+  let parsedMembers: unknown = [];
+  try {
+    parsedMembers = JSON.parse(membersRaw);
+  } catch {
+    return { ok: false, message: "Format anggota rumah tidak valid." };
   }
+
+  const members: ResidentMemberInput[] = Array.isArray(parsedMembers)
+    ? parsedMembers
+        .map((m) => ({
+          relation: String((m as { relation?: unknown }).relation ?? "").toUpperCase(),
+          name: String((m as { name?: unknown }).name ?? "").trim(),
+        }))
+        .filter((m) => m.name.length > 0)
+        .map((m) => ({
+          relation: m.relation === "KERABAT" ? "KERABAT" : "ANAK",
+          name: m.name,
+        }))
+    : [];
+
+  if (members.length > 30) {
+    return { ok: false, message: "Maksimal 30 anggota rumah." };
+  }
+
+  const note = `AGAMA:${religion};SUMBER:WARGA_FORM`;
+  const memberCreatedBy = `warga:${selectedHouseId}:anggota`;
+
+  await prisma.$transaction(async (tx) => {
+    if (existing) {
+      await tx.resident.update({
+        where: { id: existing.id },
+        data: {
+          role: relation,
+          name,
+          phone,
+          familyStatus,
+          note,
+          active: true,
+        },
+      });
+    } else {
+      await tx.resident.create({
+        data: {
+          houseId: selectedHouseId,
+          role: relation,
+          name,
+          phone,
+          familyStatus,
+          note,
+          active: true,
+          createdBy: `warga:${selectedHouseId}`,
+        },
+      });
+    }
+
+    await tx.resident.deleteMany({
+      where: { houseId: selectedHouseId, createdBy: memberCreatedBy },
+    });
+
+    if (members.length > 0) {
+      await tx.resident.createMany({
+        data: members.map((m) => ({
+          houseId: selectedHouseId,
+          role: "PENGHUNI",
+          name: m.name,
+          phone: null,
+          nik: null,
+          familyStatus: m.relation,
+          active: true,
+          note: `SUMBER:WARGA_FORM;RELASI:${m.relation}`,
+          createdBy: memberCreatedBy,
+        })),
+      });
+    }
+  });
 
   revalidatePath("/resident/form");
   revalidatePath("/profil");
