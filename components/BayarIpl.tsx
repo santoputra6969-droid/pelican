@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createPayment, type CreatePaymentResult } from "@/app/actions";
 import { Icon } from "./Icon";
@@ -38,9 +38,17 @@ export function BayarIpl({
   paidBills?: BillLite[];
   futureBills?: { year: number; month: number; amount: number }[];
 }) {
+  const orderedBills = useMemo(
+    () => [...bills].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year)),
+    [bills]
+  );
+  const orderedFutureBills = useMemo(
+    () => [...futureBills].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year)),
+    [futureBills]
+  );
   const [tab, setTab] = useState<"aktif" | "terbayar">("aktif");
   const [selectedIds, setSelectedIds] = useState<number[]>(
-    bills[0] ? [bills[0].id] : []
+    orderedBills[0] ? [orderedBills[0].id] : []
   );
   const [selectedFutureMonths, setSelectedFutureMonths] = useState<number[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -69,9 +77,14 @@ export function BayarIpl({
     }
   }, [state]);
 
-  const selectedBills = bills.filter((b) => selectedIds.includes(b.id));
-  const selectedFuture = futureBills.filter((b) => selectedFutureMonths.includes(b.month));
+  const selectedBills = orderedBills.filter((b) => selectedIds.includes(b.id));
+  const selectedFuture = orderedFutureBills.filter((b) => selectedFutureMonths.includes(b.month));
   const activeCount = bills.length + futureBills.length;
+
+  useEffect(() => {
+    setSelectedIds(orderedBills[0] ? [orderedBills[0].id] : []);
+    setSelectedFutureMonths([]);
+  }, [orderedBills, orderedFutureBills]);
 
   return (
     <>
@@ -188,6 +201,14 @@ function ActiveBills({
   bulkOpen: boolean;
   setBulkOpen: (v: boolean) => void;
 }) {
+  const orderedBills = useMemo(
+    () => [...bills].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year)),
+    [bills]
+  );
+  const orderedFutureBills = useMemo(
+    () => [...futureBills].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year)),
+    [futureBills]
+  );
   const baseTotal = selectedBills.reduce((sum, b) => sum + b.amount, 0);
   const futureTotal = selectedFuture.reduce((sum, b) => sum + b.amount, 0);
   const total = baseTotal + futureTotal;
@@ -197,11 +218,17 @@ function ActiveBills({
     selectedFutureMonths.length === futureBills.length;
 
   const toggleBill = (id: number) => {
-    setSelectedIds(
-      selectedIds.includes(id)
-        ? selectedIds.filter((x) => x !== id)
-        : [...selectedIds, id]
-    );
+    const targetIndex = orderedBills.findIndex((bill) => bill.id === id);
+    if (targetIndex === -1) return;
+
+    const nextSelectedIds = selectedIds.includes(id)
+      ? orderedBills.slice(0, targetIndex).map((bill) => bill.id)
+      : orderedBills.slice(0, targetIndex + 1).map((bill) => bill.id);
+
+    setSelectedIds(nextSelectedIds);
+    if (nextSelectedIds.length !== orderedBills.length) {
+      setSelectedFutureMonths([]);
+    }
   };
 
   const toggleAll = () => {
@@ -210,20 +237,25 @@ function ActiveBills({
       setSelectedFutureMonths([]);
       return;
     }
-    setSelectedIds(bills.map((b) => b.id));
-    setSelectedFutureMonths(futureBills.map((b) => b.month));
+    setSelectedIds(orderedBills.map((b) => b.id));
+    setSelectedFutureMonths(orderedFutureBills.map((b) => b.month));
   };
 
   const toggleFuture = (month: number) => {
+    if (selectedIds.length !== orderedBills.length) return;
+
+    const targetIndex = orderedFutureBills.findIndex((bill) => bill.month === month);
+    if (targetIndex === -1) return;
+
     setSelectedFutureMonths(
       selectedFutureMonths.includes(month)
-        ? selectedFutureMonths.filter((m) => m !== month)
-        : [...selectedFutureMonths, month]
+        ? orderedFutureBills.slice(0, targetIndex).map((bill) => bill.month)
+        : orderedFutureBills.slice(0, targetIndex + 1).map((bill) => bill.month)
     );
   };
 
   const bulkRows = [
-    ...bills.map((b) => ({
+    ...orderedBills.map((b) => ({
       key: `due-${b.id}`,
       year: b.year,
       month: b.month,
@@ -232,7 +264,7 @@ function ActiveBills({
       selected: selectedIds.includes(b.id),
       toggle: () => toggleBill(b.id),
     })),
-    ...futureBills.map((b) => ({
+    ...orderedFutureBills.map((b) => ({
       key: `future-${b.year}-${b.month}`,
       year: b.year,
       month: b.month,
@@ -330,7 +362,7 @@ function ActiveBills({
           </button>
         </div>
         <div className="space-y-3">
-          {bills.map((bill) => {
+          {orderedBills.map((bill) => {
             const active = selectedIds.includes(bill.id);
             return (
               <button
