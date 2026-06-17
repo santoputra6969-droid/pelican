@@ -167,6 +167,14 @@ export async function createPayment(
       select: { month: true },
     });
     const existingSet = new Set(existing.map((x) => x.month));
+    const invalidMonths = uniqueMonths.filter((m) => existingSet.has(m));
+    if (invalidMonths.length > 0) {
+      return {
+        ok: false,
+        message:
+          "Sebagian bulan titipan sudah memiliki tagihan. Silakan refresh lalu pilih ulang.",
+      };
+    }
     validAdvance = uniqueMonths
       .filter((m) => !existingSet.has(m))
       .map((month) => ({ year: advanceYear, month, amount: house.iplAmount }));

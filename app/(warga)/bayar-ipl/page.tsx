@@ -17,7 +17,7 @@ export default async function BayarIplPage() {
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth() + 1;
 
-  const [bills, paidBills] = await Promise.all([
+  const [bills, paidBills, yearBills] = await Promise.all([
     prisma.bill.findMany({
       where: {
         houseId: house.id,
@@ -33,17 +33,19 @@ export default async function BayarIplPage() {
       where: { houseId: house.id, status: "PAID" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
     }),
+    prisma.bill.findMany({
+      where: { houseId: house.id, year: nowYear },
+      select: { month: true },
+    }),
   ]);
 
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
-  const paidThisYear = new Set(
-    paidBills.filter((b) => b.year === nowYear).map((b) => b.month)
-  );
+  const existingYearMonths = new Set(yearBills.map((b) => b.month));
   const futureBills = Array.from(
     { length: Math.max(0, 12 - nowMonth) },
     (_, i) => nowMonth + i + 1
   )
-    .filter((m) => !paidThisYear.has(m))
+    .filter((m) => !existingYearMonths.has(m))
     .map((month) => ({ year: nowYear, month, amount: house.iplAmount }));
 
   return (
