@@ -296,11 +296,6 @@ function ActiveBills({
                       <span className="text-sm font-semibold text-ink">
                         IPL {formatPeriod(r.year, r.month)}
                       </span>
-                      {r.kind === "FUTURE" && (
-                        <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
-                          Titipan
-                        </span>
-                      )}
                     </div>
                     <span className="text-sm font-bold text-ink">
                       {formatRupiah(r.amount)}
