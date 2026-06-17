@@ -31,7 +31,6 @@ export default async function ResidentFormPage() {
         role: true,
         familyStatus: true,
         note: true,
-        kkFileId: true,
       },
     }),
   ]);
@@ -50,7 +49,6 @@ export default async function ResidentFormPage() {
           defaultRelation={existing?.role ?? "PEMILIK"}
           defaultFamilyStatus={existing?.familyStatus ?? ""}
           defaultReligion={parseReligion(existing?.note ?? null)}
-          hasKk={Boolean(existing?.kkFileId)}
         />
       </section>
 

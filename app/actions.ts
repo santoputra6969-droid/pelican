@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { HOUSE_COOKIE } from "@/lib/session";
 import { formatPeriod } from "@/lib/format";
 import { createSnapTransaction } from "@/lib/midtrans";
-import { deleteStoredFile, saveUploadedFile } from "@/lib/files";
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -367,22 +366,9 @@ export async function submitResidentForm(
     orderBy: { id: "asc" },
   });
 
-  const kk = await saveUploadedFile(formData.get("kkFile"), {
-    kind: "KK",
-    createdBy: `warga:${selectedHouseId}`,
-  });
-  if (kk && kk.ok === false) return { ok: false, message: kk.message };
-  if (!existing && !kk) {
-    return {
-      ok: false,
-      message: "File Kartu Keluarga wajib diunggah untuk pengkinian pertama.",
-    };
-  }
-
   const note = `AGAMA:${religion};SUMBER:WARGA_FORM`;
 
   if (existing) {
-    if (kk?.ok) await deleteStoredFile(existing.kkFileId);
     await prisma.resident.update({
       where: { id: existing.id },
       data: {
@@ -392,7 +378,6 @@ export async function submitResidentForm(
         familyStatus,
         note,
         active: true,
-        ...(kk?.ok ? { kkFileId: kk.id } : {}),
       },
     });
   } else {
@@ -405,7 +390,6 @@ export async function submitResidentForm(
         familyStatus,
         note,
         active: true,
-        kkFileId: kk?.ok ? kk.id : null,
         createdBy: `warga:${selectedHouseId}`,
       },
     });

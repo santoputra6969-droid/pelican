@@ -42,7 +42,6 @@ export function ResidentForm({
   defaultRelation,
   defaultFamilyStatus,
   defaultReligion,
-  hasKk,
 }: {
   houses: HouseOption[];
   selectedBlock: string;
@@ -52,7 +51,6 @@ export function ResidentForm({
   defaultRelation?: string;
   defaultFamilyStatus?: string;
   defaultReligion?: string;
-  hasKk?: boolean;
 }) {
   const [state, formAction] = useActionState<ResidentFormResult, FormData>(
     submitResidentForm,
@@ -91,7 +89,7 @@ export function ResidentForm({
   }, [state, selectedBlock, selectedNo]);
 
   return (
-    <form ref={formRef} action={formAction} className="card space-y-4 p-5" encType="multipart/form-data">
+    <form ref={formRef} action={formAction} className="card space-y-4 p-5">
       <div className="rounded-xl border border-[#1f97ef] bg-[#e8f4ff] px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
         Kami sangat menghargai privasi Anda. Data yang di-submit tidak dapat diakses publik,
         dan hanya digunakan pengurus RT untuk pendataan administratif digital.
@@ -194,24 +192,6 @@ export function ResidentForm({
             </option>
           ))}
         </select>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
-          Kartu Keluarga (Gambar atau PDF) *
-        </label>
-        <input
-          name="kkFile"
-          type="file"
-          required={!hasKk}
-          accept="image/*,application/pdf"
-          className="input-file"
-        />
-        {hasKk && (
-          <p className="mt-1 text-[11px] text-ink-faint">
-            File KK sudah pernah diunggah. Upload ulang bila ingin mengganti.
-          </p>
-        )}
       </div>
 
       {state && !state.ok && (
