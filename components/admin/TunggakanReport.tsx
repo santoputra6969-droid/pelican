@@ -29,6 +29,8 @@ export function TunggakanReport({
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>(rows.map((r) => r.id));
   const [expandedIds, setExpandedIds] = useState<number[]>([]);
+  const [kopSrc, setKopSrc] = useState("/kop-surat.png");
+  const [kopOk, setKopOk] = useState(true);
 
   useEffect(() => {
     setSelectedIds(rows.map((r) => r.id));
@@ -83,8 +85,38 @@ export function TunggakanReport({
     URL.revokeObjectURL(url);
   }
 
+  function printPdf() {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+    window.requestAnimationFrame(() => window.print());
+  }
+
   return (
     <div>
+      <div className="print-report mb-4 print-only">
+        <div className="print-report__header">
+          {kopOk ? (
+            <img
+              src={kopSrc}
+              alt="Kop Surat Cluster Puri Pelican"
+              className="print-kop-image"
+              onError={() => {
+                if (kopSrc.endsWith(".png")) {
+                  setKopSrc("/kop-surat.jpg");
+                  return;
+                }
+                setKopOk(false);
+              }}
+            />
+          ) : (
+            <>
+              <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
+              <p className="print-report__title">LAPORAN TUNGGAKAN IPL</p>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Filter & aksi */}
       <div className="card mb-4 space-y-4 p-4 print:hidden">
         <div className="max-w-sm">
@@ -129,7 +161,7 @@ export function TunggakanReport({
             <Icon name="receipt" size={18} />
             Excel
           </button>
-          <button onClick={() => window.print()} className="btn-ghost">
+          <button type="button" onClick={printPdf} className="btn-ghost">
             <Icon name="receipt" size={18} />
             Cetak PDF
           </button>
@@ -153,6 +185,13 @@ export function TunggakanReport({
       <h2 className="mb-3 text-lg font-bold text-ink">
         Daftar Tunggakan{selectedBlock !== "SEMUA" ? ` — ${selectedBlock}` : ""}
       </h2>
+
+      <p className="mb-3 text-xs text-ink-soft print-only">
+        {selectedRows.length} unit rumah menunggak IPL 1 bulan atau lebih.
+      </p>
+      <p className="mb-4 text-sm font-semibold text-ink print-only">
+        {formatRupiah(selectedTotal)} total piutang yang dimiliki.
+      </p>
 
       <div className="space-y-3 md:hidden">
         {selectedRows.map((r) => (
@@ -284,6 +323,19 @@ export function TunggakanReport({
           Tidak ada data terpilih.
         </div>
       )}
+
+      <div className="print-signatures print-only">
+        <div className="print-signatures__item">
+          <p>Dibuat oleh,</p>
+          <div />
+          <p>Admin / Bendahara</p>
+        </div>
+        <div className="print-signatures__item">
+          <p>Mengetahui,</p>
+          <div />
+          <p>Ketua Pengelola</p>
+        </div>
+      </div>
     </div>
   );
 }
