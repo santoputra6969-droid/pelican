@@ -45,8 +45,8 @@ export function IplManager({
             Berlaku untuk {payIplCount} dari {houseCount} rumah.
           </p>
 
-          <ActionForm action={setIplAmount} className="mt-4 flex flex-wrap items-end gap-3">
-            <div className="flex-1 min-w-[180px]">
+          <ActionForm action={setIplAmount} className="mt-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="w-full flex-1 sm:min-w-[180px]">
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Ubah Nominal (Rp) — diterapkan ke semua rumah
               </label>
@@ -59,7 +59,7 @@ export function IplManager({
                 className="input"
               />
             </div>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary w-full sm:w-auto">
               <Icon name="check" size={18} />
               Simpan Nominal
             </button>
@@ -80,7 +80,7 @@ export function IplManager({
               {periods.map((p) => (
                 <div
                   key={`${p.year}-${p.month}`}
-                  className="flex items-center gap-3 py-3"
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-3"
                 >
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-ink">
@@ -98,7 +98,7 @@ export function IplManager({
                       }}
                     />
                   </div>
-                  <p className="w-28 text-right text-sm font-bold text-ink">
+                  <p className="text-sm font-bold text-ink sm:w-28 sm:text-right">
                     {formatRupiah(p.total)}
                   </p>
                 </div>

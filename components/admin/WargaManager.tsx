@@ -49,8 +49,8 @@ export function WargaManager({ houses }: { houses: House[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full flex-1 sm:min-w-[200px]">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint">
             <Icon name="search" size={18} />
           </span>
@@ -61,7 +61,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
             className="input pl-11"
           />
         </div>
-        <div className="min-w-[220px]">
+        <div className="w-full sm:min-w-[220px] sm:w-auto">
           <select
             value={status}
             onChange={(e) =>
@@ -83,7 +83,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
             setEditing(null);
             setOpen(true);
           }}
-          className="btn-primary"
+          className="btn-primary w-full sm:w-auto"
         >
           <Icon name="plus" size={18} />
           Tambah Rumah
@@ -245,7 +245,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
               className="input"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Blok

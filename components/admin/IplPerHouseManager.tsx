@@ -148,7 +148,7 @@ export function IplPerHouseManager({ houses }: { houses: House[] }) {
       </div>
 
       {/* Select all */}
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-2 text-sm font-semibold text-ink-soft">
           <input
             type="checkbox"
@@ -190,7 +190,7 @@ export function IplPerHouseManager({ houses }: { houses: House[] }) {
                 />
                 {blk} · {list.length} rumah
               </label>
-              <div className="grid grid-cols-2 gap-x-2 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-x-2 sm:grid-cols-2 lg:grid-cols-3">
                 {list.map((h) => {
                   const checked = selected.has(h.id);
                   return (
@@ -231,14 +231,14 @@ export function IplPerHouseManager({ houses }: { houses: House[] }) {
           setSelected(new Set());
           setAmount("");
         }}
-        className="mt-4 flex flex-wrap items-end gap-3 border-t border-black/5 pt-4"
+        className="mt-4 flex flex-col items-stretch gap-3 border-t border-black/5 pt-4 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <input
           type="hidden"
           name="houseIds"
           value={selectedList.map((h) => h.id).join(",")}
         />
-        <div className="min-w-[180px] flex-1">
+        <div className="w-full flex-1 sm:min-w-[180px]">
           <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
             Nominal untuk {selected.size} rumah terpilih (Rp)
           </label>

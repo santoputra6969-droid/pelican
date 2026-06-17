@@ -20,7 +20,7 @@ export default async function AdminPengaduanPage() {
         subtitle="Kelola keluhan & masukan dari warga"
       />
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="card p-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
             <Icon name="chat" size={18} />
