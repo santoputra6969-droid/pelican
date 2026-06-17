@@ -176,7 +176,7 @@ export function TunggakanReport({
         </div>
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Total Piutang</p>
-          <p className="mt-1 text-2xl font-extrabold text-red-500">
+          <p className="mt-1 text-[1.55rem] font-extrabold leading-tight text-red-500 sm:text-2xl">
             {formatRupiah(selectedTotal)}
           </p>
         </div>
@@ -263,7 +263,7 @@ export function TunggakanReport({
         ))}
       </div>
 
-      <div className="hidden overflow-hidden card md:block">
+      <div className="hidden overflow-hidden card print:hidden md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>
@@ -322,10 +322,43 @@ export function TunggakanReport({
       </div>
 
       {selectedRows.length === 0 && (
-        <div className="card p-8 text-center text-sm text-ink-faint md:hidden">
+        <div className="card p-8 text-center text-sm text-ink-faint print:hidden md:hidden">
           Tidak ada data terpilih.
         </div>
       )}
+
+      <div className="hidden print:block">
+        <table className="w-full border-collapse text-left text-[11px] text-black">
+          <thead>
+            <tr>
+              <th className="border border-black px-2 py-1 text-center">No</th>
+              <th className="border border-black px-2 py-1">Nama Penghuni</th>
+              <th className="border border-black px-2 py-1">Tunggakan</th>
+              <th className="border border-black px-2 py-1 text-right">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedRows.map((r, index) => (
+              <tr key={`print-row-${r.id}`}>
+                <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
+                <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
+                <td className="border border-black px-2 py-1">{r.months} bulan</td>
+                <td className="border border-black px-2 py-1 text-right">{formatRupiah(r.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td className="border border-black px-2 py-1 font-bold" colSpan={3}>
+                TOTAL
+              </td>
+              <td className="border border-black px-2 py-1 text-right font-bold">
+                {formatRupiah(selectedTotal)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
       <div className="print-signatures print-only">
         <div className="print-signatures__item">
