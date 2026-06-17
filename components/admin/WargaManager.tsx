@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteHouse, saveHouse } from "@/app/admin/actions";
@@ -21,8 +22,11 @@ type House = {
 };
 
 export function WargaManager({ houses }: { houses: House[] }) {
+  const router = useRouter();
   const [editing, setEditing] = useState<House | null>(null);
   const [open, setOpen] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
+  const [pickHouseId, setPickHouseId] = useState<number>(houses[0]?.id ?? 0);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | "OWNER" | "RENTER" | "EMPTY">("ALL");
 
@@ -41,6 +45,16 @@ export function WargaManager({ houses }: { houses: House[] }) {
       return !h.occupied;
     });
   }, [houses, query, status]);
+
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setPickHouseId(0);
+      return;
+    }
+    if (!filtered.some((h) => h.id === pickHouseId)) {
+      setPickHouseId(filtered[0].id);
+    }
+  }, [filtered, pickHouseId]);
 
   function statusLabel(h: House) {
     if (!h.occupied) return "Kosong";
@@ -87,6 +101,14 @@ export function WargaManager({ houses }: { houses: House[] }) {
         >
           <Icon name="plus" size={18} />
           Tambah Rumah
+        </button>
+        <button
+          type="button"
+          onClick={() => setPickOpen(true)}
+          className="btn-ghost w-full sm:w-auto"
+        >
+          <Icon name="user-edit" size={17} />
+          Pengkinian Data
         </button>
       </div>
 
@@ -315,6 +337,43 @@ export function WargaManager({ houses }: { houses: House[] }) {
             Simpan
           </button>
         </ActionForm>
+      </Modal>
+
+      <Modal
+        open={pickOpen}
+        onClose={() => setPickOpen(false)}
+        title="Pilih Rumah untuk Pengkinian Data"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
+              Rumah
+            </label>
+            <select
+              value={String(pickHouseId)}
+              onChange={(e) => setPickHouseId(Number(e.target.value))}
+              className="input"
+            >
+              {filtered.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {`Blok ${h.block} No. ${h.no} ${h.ownerName ? `- ${h.ownerName}` : ""}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            disabled={!pickHouseId}
+            onClick={() => {
+              setPickOpen(false);
+              router.push(`/admin/warga/${pickHouseId}`);
+            }}
+            className="btn-primary w-full disabled:opacity-60"
+          >
+            Lanjut Isi Data
+          </button>
+        </div>
       </Modal>
     </div>
   );
