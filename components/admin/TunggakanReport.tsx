@@ -136,7 +136,7 @@ export function TunggakanReport({
             ))}
           </select>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button
             type="button"
             onClick={selectAll}
@@ -151,17 +151,17 @@ export function TunggakanReport({
           >
             BATAL PILIH SEMUA
           </button>
-          <p className="self-center text-sm text-ink-soft">
+          <p className="col-span-2 self-center text-sm text-ink-soft sm:col-span-1">
             ({selectedIds.length} dari {rows.length} dipilih)
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button onClick={exportCsv} className="btn-ghost">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <button onClick={exportCsv} className="btn-ghost w-full justify-center sm:w-auto">
             <Icon name="receipt" size={18} />
             Excel
           </button>
-          <button type="button" onClick={printPdf} className="btn-ghost">
+          <button type="button" onClick={printPdf} className="btn-ghost w-full justify-center sm:w-auto">
             <Icon name="receipt" size={18} />
             Cetak PDF
           </button>
@@ -197,31 +197,19 @@ export function TunggakanReport({
         {selectedRows.map((r) => (
           <div
             key={`mobile-${r.id}`}
-            className={`card w-full p-4 text-left transition ${
-              selectedIds.includes(r.id) ? "ring-1 ring-pelican-500" : ""
+            className={`card w-full rounded-2xl border p-4 text-left transition ${
+              selectedIds.includes(r.id)
+                ? "border-pelican-300 bg-pelican-50/40"
+                : "border-black/10 bg-white"
             }`}
           >
             <div className="flex items-start gap-3">
-              <span
-                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  selectedIds.includes(r.id)
-                    ? "border-pelican-500 bg-pelican-500 text-white"
-                    : "border-black/20"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(r.id)}
-                  onChange={() => toggleRow(r.id)}
-                  className="h-4 w-4 accent-pelican-600"
-                />
-              </span>
               <div className="min-w-0 flex-1">
-                <p className="text-xl font-extrabold text-ink">
+                <p className="text-3xl font-extrabold leading-tight text-ink">
                   {r.block} No {r.no}
                 </p>
-                <p className="text-base text-ink-soft">{r.ownerName ?? "Belum pengkinian data"}</p>
-                <p className="mt-1 text-lg font-bold text-red-500">
+                <p className="mt-1 text-lg text-ink-soft">{r.ownerName ?? "Belum pengkinian data"}</p>
+                <p className="mt-2 text-xl font-bold text-red-500">
                   {r.months} bulan - {formatRupiah(r.total)}
                 </p>
               </div>
@@ -239,6 +227,21 @@ export function TunggakanReport({
               </button>
             </div>
 
+            <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3">
+              <button
+                type="button"
+                onClick={() => toggleRow(r.id)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${
+                  selectedIds.includes(r.id)
+                    ? "bg-pelican-100 text-pelican-800"
+                    : "bg-black/5 text-ink-soft"
+                }`}
+              >
+                {selectedIds.includes(r.id) ? "Terpilih" : "Pilih"}
+              </button>
+              <p className="text-xs text-ink-faint">Tap panah untuk detail bulan</p>
+            </div>
+
             {expandedIds.includes(r.id) && (
               <div className="mt-4 space-y-2">
                 {r.bills.map((b, idx) => (
@@ -246,10 +249,10 @@ export function TunggakanReport({
                     key={`${r.id}-${b.year}-${b.month}-${idx}`}
                     className="rounded-lg border border-black/10 bg-white p-3"
                   >
-                    <p className="text-2xl font-semibold text-ink">
+                    <p className="text-base font-semibold text-ink">
                       Bulan {b.month} Tahun {b.year}
                     </p>
-                    <p className="text-lg text-ink-soft">
+                    <p className="text-sm text-ink-soft">
                       Nominal: <span className="font-semibold text-ink">{formatRupiah(b.amount)}</span>
                     </p>
                   </div>
