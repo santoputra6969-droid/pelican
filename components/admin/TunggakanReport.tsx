@@ -93,8 +93,185 @@ export function TunggakanReport({
     URL.revokeObjectURL(url);
   }
 
+  function isIOSSafari() {
+    if (typeof window === "undefined") return false;
+    const ua = window.navigator.userAgent;
+    const isiOS = /iP(hone|ad|od)/.test(ua);
+    const isWebKit = /WebKit/.test(ua);
+    const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    return isiOS && isWebKit && !isOtherIOSBrowser;
+  }
+
+  function escapeHtml(value: string) {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function printViaTemplate() {
+    const win = window.open("", "_blank");
+    if (!win) {
+      window.print();
+      return;
+    }
+
+    const rowsHtml = selectedRows
+      .map(
+        (r, idx) => `
+          <tr>
+            <td class="c tc">${idx + 1}</td>
+            <td class="c">${escapeHtml(`${r.block} No ${r.no}`)}</td>
+            <td class="c">${escapeHtml(r.ownerName ?? "Belum pengkinian data")}</td>
+            <td class="c nw">${r.months} bulan</td>
+            <td class="c tr nw">${formatRupiah(r.total)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const totalMonths = selectedRows.reduce((acc, r) => acc + r.months, 0);
+    const titleBlock = selectedBlock === "SEMUA" ? "Semua" : selectedBlock;
+    const kopUrl = `${window.location.origin}${kopSrc}`;
+
+    const html = `
+      <!doctype html>
+      <html lang="id">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>PDF Tunggakan IPL</title>
+          <style>
+            @page { size: A4; margin: 8mm; }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              color: #000;
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+            }
+            .wrap {
+              width: 100%;
+            }
+            .kop {
+              width: 100%;
+              display: block;
+              border-bottom: 2px solid #111;
+              padding-bottom: 5px;
+              margin-bottom: 6px;
+            }
+            .title {
+              text-align: center;
+              font-size: 28px;
+              font-weight: 700;
+              line-height: 1.25;
+              margin: 0;
+            }
+            .meta {
+              text-align: center;
+              font-size: 20px;
+              margin: 2px 0 8px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 2px 4px;
+              font-size: 10px;
+              line-height: 1.2;
+              vertical-align: middle;
+              word-break: break-word;
+            }
+            thead th {
+              background: #fde047;
+              font-weight: 700;
+            }
+            tfoot tr:first-child td {
+              background: #e5e7eb;
+              font-weight: 700;
+            }
+            tfoot tr:last-child td {
+              background: #86efac;
+              font-weight: 700;
+            }
+            .c { text-align: left; }
+            .tc { text-align: center; }
+            .tr { text-align: right; }
+            .nw { white-space: nowrap; }
+            .col-no { width: 6%; }
+            .col-rumah { width: 18%; }
+            .col-nama { width: 34%; }
+            .col-tunggakan { width: 16%; }
+            .col-nominal { width: 26%; }
+            tr { page-break-inside: avoid; }
+            thead { display: table-header-group; }
+          </style>
+        </head>
+        <body>
+          <div class="wrap">
+            <img class="kop" src="${kopUrl}" alt="Kop Surat" />
+            <p class="title">Tunggakan IPL Cluster Puri Pelican Blok ${escapeHtml(titleBlock)}</p>
+            <p class="meta">Dicetak pada ${escapeHtml(printedAt)} WIB</p>
+
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-no">No</th>
+                  <th class="col-rumah">Blok &amp; No</th>
+                  <th class="col-nama">Nama Penghuni</th>
+                  <th class="col-tunggakan">Tunggakan</th>
+                  <th class="col-nominal tr">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3">TOTAL</td>
+                  <td class="nw">${totalMonths} bulan</td>
+                  <td class="tr nw">${formatRupiah(selectedTotal)}</td>
+                </tr>
+                <tr>
+                  <td colspan="4">TOTAL NETT (-0.7%)</td>
+                  <td class="tr nw">${formatRupiah(totalNett)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <script>
+            window.addEventListener('load', function () {
+              setTimeout(function () {
+                window.print();
+              }, 250);
+            });
+          </script>
+        </body>
+      </html>
+    `;
+
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }
+
   function printPdf() {
     if (typeof window === "undefined") return;
+    if (isIOSSafari()) {
+      printViaTemplate();
+      return;
+    }
     window.scrollTo(0, 0);
     window.requestAnimationFrame(() => window.print());
   }
