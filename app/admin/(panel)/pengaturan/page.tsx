@@ -49,7 +49,7 @@ export default async function AdminPengaturanPage() {
         subtitle="Atur konfigurasi iuran global agar modul tunggakan & sistag konsisten"
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Rumah Wajib IPL</p>
           <p className="mt-1 text-2xl font-extrabold text-ink">{iplActive}</p>

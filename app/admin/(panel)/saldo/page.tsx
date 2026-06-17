@@ -41,7 +41,7 @@ export default async function AdminSaldoPage() {
         action={<AddTransaksiForm />}
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card p-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-50 text-pelican-600">
             <Icon name="wallet" size={18} />

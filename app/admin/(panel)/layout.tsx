@@ -11,9 +11,9 @@ export default async function AdminPanelLayout({
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[var(--background)] lg:flex">
+      <div className="min-h-screen overflow-x-hidden bg-[var(--background)] lg:flex">
         <AdminSidebar adminName={admin.name} />
-        <main className="flex-1 lg:h-screen lg:overflow-y-auto">{children}</main>
+        <main className="min-w-0 flex-1 lg:h-screen lg:overflow-y-auto">{children}</main>
       </div>
     </ToastProvider>
   );

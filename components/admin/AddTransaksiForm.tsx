@@ -23,7 +23,7 @@ export function AddTransaksiForm() {
 
   return (
     <>
-      <button onClick={openForm} className="btn-primary">
+      <button onClick={openForm} className="btn-primary w-full sm:w-auto">
         <Icon name="plus" size={18} />
         Catat Transaksi
       </button>
