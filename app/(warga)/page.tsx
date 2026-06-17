@@ -22,10 +22,20 @@ function stripHtml(html: string): string {
 export default async function HomePage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
 
   const [unpaidBills, banners, infos, balance] = await Promise.all([
     prisma.bill.findMany({
-      where: { houseId: house.id, status: "UNPAID" },
+      where: {
+        houseId: house.id,
+        status: "UNPAID",
+        OR: [
+          { year: { lt: nowYear } },
+          { year: nowYear, month: { lte: nowMonth } },
+        ],
+      },
       orderBy: [{ year: "asc" }, { month: "asc" }],
     }),
     prisma.banner.findMany({
