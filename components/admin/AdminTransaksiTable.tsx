@@ -359,27 +359,40 @@ export function AdminTransaksiTable({
       </div>
 
       {/* Mobile */}
-      <div className="divide-y divide-black/5 md:hidden">
+      <div className="space-y-3 md:hidden">
         {filtered.map((t) => {
           const masuk = t.mutation === "DEBIT";
+          const amountColor = masuk ? "text-pelican-700" : "text-red-500";
           return (
-            <div key={t.id} className="flex items-center gap-3 p-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
-                </p>
-                <p className="truncate text-[11px] text-ink-faint">
-                  {t.notes ?? t.category}
-                </p>
+            <div key={t.id} className="card overflow-hidden p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold leading-snug text-ink">
+                    {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-ink-faint">
+                    {t.notes ?? "Tanpa catatan"}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className={`text-sm font-bold ${amountColor}`}>
+                    {masuk ? "+" : "−"}
+                    {formatRupiah(t.amount)}
+                  </p>
+                  <p className="mt-1 text-[10px] text-ink-faint">{t.category}</p>
+                </div>
               </div>
-              <p
-                className={`text-sm font-bold ${
-                  masuk ? "text-pelican-700" : "text-red-500"
-                }`}
-              >
-                {masuk ? "+" : "−"}
-                {formatRupiah(t.amount)}
-              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-black/5 pt-3 text-xs text-ink-soft">
+                <div>
+                  <p className="text-[10px] text-ink-faint">Tanggal</p>
+                  <p className="mt-0.5 leading-snug">{formatDateTime(t.date)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-ink-faint">Petugas</p>
+                  <p className="mt-0.5 leading-snug">{t.createdBy ?? "—"}</p>
+                </div>
+              </div>
             </div>
           );
         })}
