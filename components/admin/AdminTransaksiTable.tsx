@@ -26,6 +26,8 @@ export function AdminTransaksiTable({
   subtitle?: string;
 }) {
   const [query, setQuery] = useState("");
+  const [kopSrc, setKopSrc] = useState("/kop-surat.png");
+  const [kopOk, setKopOk] = useState(true);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -264,9 +266,30 @@ export function AdminTransaksiTable({
 
   return (
     <div className="card overflow-hidden">
-      <div className="print-only border-b border-black/15 p-3 text-center">
-        <p className="text-base font-bold text-black">{title}</p>
-        <p className="text-xs text-black">{subtitle}</p>
+      <div className="print-report mb-3 print-only">
+        <div className="print-report__header">
+          {kopOk ? (
+            <img
+              src={kopSrc}
+              alt="Kop Surat Cluster Puri Pelican"
+              className="print-kop-image"
+              onError={() => {
+                if (kopSrc.endsWith(".png")) {
+                  setKopSrc("/kop-surat.jpg");
+                  return;
+                }
+                setKopOk(false);
+              }}
+            />
+          ) : (
+            <>
+              <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
+              <p className="print-report__title">{title.toUpperCase()}</p>
+            </>
+          )}
+        </div>
+        <p className="text-center text-sm font-semibold text-black">{title}</p>
+        <p className="text-center text-xs text-black">{subtitle}</p>
       </div>
 
       <div className="border-b border-black/5 p-4 print:hidden">
