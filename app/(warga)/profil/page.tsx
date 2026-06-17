@@ -126,6 +126,24 @@ export default async function ProfilPage() {
         </section>
       ) : null}
 
+      <section className="mt-5 px-5">
+        <Link
+          href="/resident/form"
+          className="card flex items-center gap-3 p-4 transition active:scale-[0.99]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+            <Icon name="user-edit" size={20} />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-ink">Pengkinian Data Warga</p>
+            <p className="text-xs text-ink-faint">
+              Lengkapi data KK dan informasi penghuni rumah
+            </p>
+          </div>
+          <Icon name="chevron-right" size={20} className="text-ink-faint" />
+        </Link>
+      </section>
+
       {/* Ganti rumah */}
       <section className="mt-5 px-5 pb-8">
         <form action={clearHouse}>

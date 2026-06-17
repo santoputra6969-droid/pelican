@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { HOUSE_COOKIE } from "@/lib/session";
 import { formatPeriod } from "@/lib/format";
 import { createSnapTransaction } from "@/lib/midtrans";
+import { deleteStoredFile, saveUploadedFile } from "@/lib/files";
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -281,6 +282,141 @@ export type ComplaintResult =
   | { ok: true }
   | { ok: false; message: string }
   | null;
+
+export type ResidentFormResult =
+  | { ok: true; message: string }
+  | { ok: false; message: string }
+  | null;
+
+const RESIDENT_RELATIONS = ["PEMILIK", "PENGHUNI"] as const;
+const RESIDENT_STATUSES = [
+  "BELUM_KAWIN",
+  "KAWIN",
+  "KAWIN_ANAK_1",
+  "KAWIN_ANAK_2",
+  "KAWIN_ANAK_3",
+  "KAWIN_ANAK_4",
+  "KAWIN_ANAK_5",
+  "BERCERAI",
+  "BERCERAI_ANAK_1",
+  "BERCERAI_ANAK_2",
+  "BERCERAI_ANAK_3",
+  "BERCERAI_ANAK_4",
+  "BERCERAI_ANAK_5",
+] as const;
+const RESIDENT_RELIGIONS = [
+  "ISLAM",
+  "KRISTEN",
+  "KATHOLIK",
+  "BUDDHA",
+  "HINDU",
+  "KHONGHUCU",
+] as const;
+
+export async function submitResidentForm(
+  _prev: ResidentFormResult,
+  formData: FormData
+): Promise<ResidentFormResult> {
+  const store = await cookies();
+  const selectedHouseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+  if (!Number.isFinite(selectedHouseId) || selectedHouseId <= 0) {
+    return { ok: false, message: "Silakan pilih rumah Anda terlebih dahulu." };
+  }
+
+  const block = String(formData.get("block") ?? "").trim();
+  const no = String(formData.get("no") ?? "").trim();
+  const relationRaw = String(formData.get("relation") ?? "PEMILIK").toUpperCase();
+  const relation = RESIDENT_RELATIONS.includes(relationRaw as (typeof RESIDENT_RELATIONS)[number])
+    ? relationRaw
+    : "PEMILIK";
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const familyStatusRaw = String(formData.get("familyStatus") ?? "").toUpperCase();
+  const familyStatus = RESIDENT_STATUSES.includes(
+    familyStatusRaw as (typeof RESIDENT_STATUSES)[number]
+  )
+    ? familyStatusRaw
+    : "";
+  const religionRaw = String(formData.get("religion") ?? "").toUpperCase();
+  const religion = RESIDENT_RELIGIONS.includes(
+    religionRaw as (typeof RESIDENT_RELIGIONS)[number]
+  )
+    ? religionRaw
+    : "";
+
+  if (!block || !no || !name || !phone || !familyStatus || !religion) {
+    return { ok: false, message: "Semua field wajib harus diisi." };
+  }
+
+  const targetHouse = await prisma.house.findUnique({
+    where: { block_no: { block, no } },
+    select: { id: true },
+  });
+  if (!targetHouse) {
+    return { ok: false, message: "Blok / nomor rumah tidak valid." };
+  }
+  if (targetHouse.id !== selectedHouseId) {
+    return {
+      ok: false,
+      message: "Blok / nomor rumah harus sesuai rumah yang sedang aktif.",
+    };
+  }
+
+  const existing = await prisma.resident.findFirst({
+    where: { houseId: selectedHouseId, createdBy: `warga:${selectedHouseId}` },
+    orderBy: { id: "asc" },
+  });
+
+  const kk = await saveUploadedFile(formData.get("kkFile"), {
+    kind: "KK",
+    createdBy: `warga:${selectedHouseId}`,
+  });
+  if (kk && kk.ok === false) return { ok: false, message: kk.message };
+  if (!existing && !kk) {
+    return {
+      ok: false,
+      message: "File Kartu Keluarga wajib diunggah untuk pengkinian pertama.",
+    };
+  }
+
+  const note = `AGAMA:${religion};SUMBER:WARGA_FORM`;
+
+  if (existing) {
+    if (kk?.ok) await deleteStoredFile(existing.kkFileId);
+    await prisma.resident.update({
+      where: { id: existing.id },
+      data: {
+        role: relation,
+        name,
+        phone,
+        familyStatus,
+        note,
+        active: true,
+        ...(kk?.ok ? { kkFileId: kk.id } : {}),
+      },
+    });
+  } else {
+    await prisma.resident.create({
+      data: {
+        houseId: selectedHouseId,
+        role: relation,
+        name,
+        phone,
+        familyStatus,
+        note,
+        active: true,
+        kkFileId: kk?.ok ? kk.id : null,
+        createdBy: `warga:${selectedHouseId}`,
+      },
+    });
+  }
+
+  revalidatePath("/resident/form");
+  revalidatePath("/profil");
+  revalidatePath("/admin/warga");
+  revalidatePath(`/admin/warga/${selectedHouseId}`);
+  return { ok: true, message: "Pengkinian data berhasil disimpan." };
+}
 
 const COMPLAINT_CATEGORIES = [
   "KEAMANAN",
