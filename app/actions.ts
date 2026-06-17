@@ -127,6 +127,11 @@ export async function createPayment(
   formData: FormData
 ): Promise<CreatePaymentResult> {
   const rawIds = String(formData.get("billIds") ?? formData.get("billId") ?? "");
+  const advanceYear = Number(formData.get("advanceYear") ?? 0);
+  const advanceMonths = String(formData.get("advanceMonths") ?? "")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12);
   const billIds = rawIds
     .split(",")
     .map((s) => Number(s.trim()))
@@ -134,7 +139,8 @@ export async function createPayment(
 
   const store = await cookies();
   const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
-  if (!houseId || billIds.length === 0)
+  const hasAdvance = advanceYear > 0 && advanceMonths.length > 0;
+  if (!houseId || (billIds.length === 0 && !hasAdvance))
     return { ok: false, message: "Sesi tidak valid." };
 
   const house = await prisma.house.findUnique({ where: { id: houseId } });
@@ -144,22 +150,55 @@ export async function createPayment(
     where: { id: { in: billIds }, houseId, status: { not: "PAID" } },
     orderBy: [{ year: "asc" }, { month: "asc" }],
   });
-  if (bills.length === 0)
+  if (bills.length === 0 && !hasAdvance)
     return { ok: false, message: "Tidak ada tagihan yang bisa dibayar." };
 
-  const total = bills.reduce((sum, b) => sum + b.amount, 0);
+  let validAdvance: { year: number; month: number; amount: number }[] = [];
+  if (hasAdvance) {
+    const now = new Date();
+    if (advanceYear !== now.getFullYear()) {
+      return { ok: false, message: "Pembayaran full hanya untuk tahun berjalan." };
+    }
+    const uniqueMonths = [...new Set(advanceMonths)].filter(
+      (m) => m >= now.getMonth() + 1
+    );
+    const existing = await prisma.bill.findMany({
+      where: { houseId, year: advanceYear, month: { in: uniqueMonths } },
+      select: { month: true },
+    });
+    const existingSet = new Set(existing.map((x) => x.month));
+    validAdvance = uniqueMonths
+      .filter((m) => !existingSet.has(m))
+      .map((month) => ({ year: advanceYear, month, amount: house.iplAmount }));
+  }
+
+  if (bills.length === 0 && validAdvance.length === 0) {
+    return { ok: false, message: "Tidak ada item pembayaran yang valid." };
+  }
+
+  const total =
+    bills.reduce((sum, b) => sum + b.amount, 0) +
+    validAdvance.reduce((sum, a) => sum + a.amount, 0);
   const orderId = `IPL-${houseId}-${Date.now()}-${Math.floor(
     Math.random() * 1000
   )
     .toString()
     .padStart(3, "0")}`;
 
-  const items = bills.map((b) => ({
-    id: String(b.id),
-    price: b.amount,
-    quantity: 1,
-    name: `IPL ${formatPeriod(b.year, b.month)}`.slice(0, 50),
-  }));
+  const items = [
+    ...bills.map((b) => ({
+      id: `B-${b.id}`,
+      price: b.amount,
+      quantity: 1,
+      name: `IPL ${formatPeriod(b.year, b.month)}`.slice(0, 50),
+    })),
+    ...validAdvance.map((a) => ({
+      id: `A-${a.year}${String(a.month).padStart(2, "0")}`,
+      price: a.amount,
+      quantity: 1,
+      name: `IPL Titipan ${formatPeriod(a.year, a.month)}`.slice(0, 50),
+    })),
+  ];
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ?? "";
@@ -169,7 +208,12 @@ export async function createPayment(
       data: {
         orderId,
         houseId,
-        billIds: bills.map((b) => b.id).join(","),
+        billIds: [
+          ...bills.map((b) => `B${b.id}`),
+          ...validAdvance.map(
+            (a) => `A${a.year}-${String(a.month).padStart(2, "0")}`
+          ),
+        ].join(","),
         amount: total,
         status: "PENDING",
         createdBy: house.ownerName ?? `Blok ${house.block} No ${house.no}`,

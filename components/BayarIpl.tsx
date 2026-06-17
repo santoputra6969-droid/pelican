@@ -32,9 +32,11 @@ declare global {
 export function BayarIpl({
   bills,
   paidBills = [],
+  advanceOffer,
 }: {
   bills: BillLite[];
   paidBills?: BillLite[];
+  advanceOffer?: { year: number; months: number[]; amountPerMonth: number };
 }) {
   const [tab, setTab] = useState<"aktif" | "terbayar">("aktif");
   const [selectedIds, setSelectedIds] = useState<number[]>(
@@ -44,6 +46,7 @@ export function BayarIpl({
     createPayment,
     null
   );
+  const [includeAdvance, setIncludeAdvance] = useState(false);
 
   // Saat token Snap siap, buka popup pembayaran Midtrans.
   useEffect(() => {
@@ -143,6 +146,9 @@ export function BayarIpl({
           selectedBills={selectedBills}
           formAction={formAction}
           state={state}
+          advanceOffer={advanceOffer}
+          includeAdvance={includeAdvance}
+          setIncludeAdvance={setIncludeAdvance}
         />
       )}
     </>
@@ -156,6 +162,9 @@ function ActiveBills({
   selectedBills,
   formAction,
   state,
+  advanceOffer,
+  includeAdvance,
+  setIncludeAdvance,
 }: {
   bills: BillLite[];
   selectedIds: number[];
@@ -163,8 +172,17 @@ function ActiveBills({
   selectedBills: BillLite[];
   formAction: (formData: FormData) => void;
   state: CreatePaymentResult;
+  advanceOffer?: { year: number; months: number[]; amountPerMonth: number };
+  includeAdvance: boolean;
+  setIncludeAdvance: (v: boolean) => void;
 }) {
-  const total = selectedBills.reduce((sum, b) => sum + b.amount, 0);
+  const baseTotal = selectedBills.reduce((sum, b) => sum + b.amount, 0);
+  const advanceCount = advanceOffer?.months.length ?? 0;
+  const advanceTotal =
+    includeAdvance && advanceOffer
+      ? advanceOffer.amountPerMonth * advanceOffer.months.length
+      : 0;
+  const total = baseTotal + advanceTotal;
   const allSelected = bills.length > 0 && selectedIds.length === bills.length;
 
   const toggleBill = (id: number) => {
@@ -283,6 +301,33 @@ function ActiveBills({
 
       {/* Metode */}
       <section className="mt-6 px-5">
+        {advanceOffer && advanceCount > 0 && (
+          <div className="card mb-3 p-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={includeAdvance}
+                onChange={(e) => setIncludeAdvance(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-pelican-600"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-ink">
+                  Bayar full sampai Desember {advanceOffer.year}
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-soft">
+                  Bulan {advanceOffer.months.map((m) => formatPeriod(advanceOffer.year, m)).join(", ")}
+                </span>
+                <span className="mt-1 block text-sm font-extrabold text-pelican-700">
+                  + {formatRupiah(advanceOffer.amountPerMonth * advanceOffer.months.length)}
+                </span>
+                <span className="mt-1 block text-[11px] text-ink-faint">
+                  Pembayaran ini tidak dimasukkan ke tunggakan. Akan dicatat sebagai titipan IPL.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
         <h2 className="mb-3 text-base font-bold text-ink">Metode Pembayaran</h2>
         <div className="card flex items-center gap-3 p-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-50 text-pelican-600">
@@ -298,7 +343,13 @@ function ActiveBills({
       {/* Pay bar */}
       <form action={formAction} className="sticky bottom-20 z-20 mb-8 mt-6 px-5">
         <input type="hidden" name="billIds" value={selectedIds.join(",")} />
-        <PayButton amount={total} disabled={selectedBills.length === 0} />
+        {includeAdvance && advanceOffer && advanceCount > 0 && (
+          <>
+            <input type="hidden" name="advanceYear" value={String(advanceOffer.year)} />
+            <input type="hidden" name="advanceMonths" value={advanceOffer.months.join(",")} />
+          </>
+        )}
+        <PayButton amount={total} disabled={selectedBills.length === 0 && !includeAdvance} />
         {state && !state.ok && (
           <p className="mt-2 text-center text-xs font-semibold text-red-500">
             {state.message}

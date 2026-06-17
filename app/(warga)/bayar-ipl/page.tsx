@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function BayarIplPage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
+  const now = new Date();
 
   const [bills, paidBills] = await Promise.all([
     prisma.bill.findMany({
@@ -26,6 +27,15 @@ export default async function BayarIplPage() {
   ]);
 
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
+  const existingThisYear = new Set(
+    [...bills, ...paidBills]
+      .filter((b) => b.year === now.getFullYear())
+      .map((b) => b.month)
+  );
+  const startMonth = now.getMonth() + 1;
+  const advanceMonths = Array.from({ length: 12 - startMonth + 1 }, (_, i) => startMonth + i).filter(
+    (m) => !existingThisYear.has(m)
+  );
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -60,6 +70,11 @@ export default async function BayarIplPage() {
           month: b.month,
           amount: b.amount,
         }))}
+        advanceOffer={{
+          year: now.getFullYear(),
+          months: advanceMonths,
+          amountPerMonth: house.iplAmount,
+        }}
       />
 
       <Script

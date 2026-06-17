@@ -15,10 +15,30 @@ export async function settlePayment(
   if (!payment) return { ok: false, reason: "payment-not-found" };
   if (payment.status === "PAID") return { ok: true, reason: "already-paid" };
 
-  const billIds = payment.billIds
+  const refs = payment.billIds
     .split(",")
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const billIds = refs
+    .map((ref) => {
+      if (/^\d+$/.test(ref)) return Number(ref); // kompatibilitas lama
+      if (/^B\d+$/.test(ref)) return Number(ref.slice(1));
+      return null;
+    })
+    .filter((n): n is number => Number.isInteger(n) && (n ?? 0) > 0);
+
+  const advanceRefs = refs
+    .map((ref) => {
+      const m = /^A(\d{4})-(\d{2})$/.exec(ref);
+      if (!m) return null;
+      const year = Number(m[1]);
+      const month = Number(m[2]);
+      if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12)
+        return null;
+      return { year, month };
+    })
+    .filter((x): x is { year: number; month: number } => Boolean(x));
 
   const house = await prisma.house.findUnique({
     where: { id: payment.houseId },
@@ -53,6 +73,57 @@ export async function settlePayment(
         data: { status: "PAID", transactionId: trx.id, updatedBy: actor },
       });
       total += bill.amount;
+      lastTxId = String(trx.id);
+    }
+
+    for (const adv of advanceRefs) {
+      const existing = await tx.bill.findUnique({
+        where: {
+          houseId_year_month: {
+            houseId: payment.houseId,
+            year: adv.year,
+            month: adv.month,
+          },
+        },
+      });
+
+      if (existing?.status === "PAID") continue;
+
+      const amount = existing?.amount ?? house.iplAmount;
+      const notes = `PEMBAYARAN IPL TITIPAN ${house.block} No ${house.no} Untuk bulan ${adv.month} dan tahun ${adv.year}.`;
+      const trx = await tx.transaction.create({
+        data: {
+          category: "UTAMA",
+          type: "IPL",
+          idSettlement: `${orderId}-ADV-${adv.year}${String(adv.month).padStart(2, "0")}`,
+          notes,
+          amount,
+          mutation: "DEBIT",
+          createdBy: actor,
+        },
+      });
+
+      if (existing) {
+        await tx.bill.update({
+          where: { id: existing.id },
+          data: { status: "PAID", transactionId: trx.id, updatedBy: actor },
+        });
+      } else {
+        await tx.bill.create({
+          data: {
+            houseId: payment.houseId,
+            year: adv.year,
+            month: adv.month,
+            amount,
+            status: "PAID",
+            transactionId: trx.id,
+            createdBy: actor,
+            updatedBy: actor,
+          },
+        });
+      }
+
+      total += amount;
       lastTxId = String(trx.id);
     }
 
