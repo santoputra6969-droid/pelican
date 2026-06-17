@@ -43,6 +43,7 @@ export function BayarIpl({
     bills[0] ? [bills[0].id] : []
   );
   const [selectedFutureMonths, setSelectedFutureMonths] = useState<number[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [state, formAction] = useActionState<CreatePaymentResult, FormData>(
     createPayment,
     null
@@ -152,6 +153,8 @@ export function BayarIpl({
           selectedFuture={selectedFuture}
           formAction={formAction}
           state={state}
+          bulkOpen={bulkOpen}
+          setBulkOpen={setBulkOpen}
         />
       )}
     </>
@@ -169,6 +172,8 @@ function ActiveBills({
   selectedFuture,
   formAction,
   state,
+  bulkOpen,
+  setBulkOpen,
 }: {
   bills: BillLite[];
   futureBills: { year: number; month: number; amount: number }[];
@@ -180,6 +185,8 @@ function ActiveBills({
   selectedFuture: { year: number; month: number; amount: number }[];
   formAction: (formData: FormData) => void;
   state: CreatePaymentResult;
+  bulkOpen: boolean;
+  setBulkOpen: (v: boolean) => void;
 }) {
   const baseTotal = selectedBills.reduce((sum, b) => sum + b.amount, 0);
   const futureTotal = selectedFuture.reduce((sum, b) => sum + b.amount, 0);
@@ -215,12 +222,101 @@ function ActiveBills({
     );
   };
 
+  const bulkRows = [
+    ...bills.map((b) => ({
+      key: `due-${b.id}`,
+      year: b.year,
+      month: b.month,
+      amount: b.amount,
+      kind: "DUE" as const,
+      selected: selectedIds.includes(b.id),
+      toggle: () => toggleBill(b.id),
+    })),
+    ...futureBills.map((b) => ({
+      key: `future-${b.year}-${b.month}`,
+      year: b.year,
+      month: b.month,
+      amount: b.amount,
+      kind: "FUTURE" as const,
+      selected: selectedFutureMonths.includes(b.month),
+      toggle: () => toggleFuture(b.month),
+    })),
+  ].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year));
+
   return (
     <>
+      {/* Bayar Sekaligus */}
+      <section className="mt-4 px-5">
+        <button
+          type="button"
+          onClick={() => setBulkOpen(!bulkOpen)}
+          className="rounded-lg bg-black/55 px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white shadow-sm transition hover:bg-black/65"
+        >
+          Bayar Sekaligus
+        </button>
+      </section>
+
+      {bulkOpen && (
+        <section className="mt-3 px-5">
+          <div className="card p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-ink">Pilih Bulan Pembayaran</p>
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="text-xs font-bold text-pelican-700"
+              >
+                {allSelected ? "Batal Pilih Semua" : "Pilih Semua"}
+              </button>
+            </div>
+
+            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {bulkRows.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={r.toggle}
+                  className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                    r.selected
+                      ? "border-pelican-400 bg-pelican-50"
+                      : "border-black/10 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-4 w-4 items-center justify-center rounded border ${
+                          r.selected
+                            ? "border-pelican-500 bg-pelican-500 text-white"
+                            : "border-black/20"
+                        }`}
+                      >
+                        {r.selected && <Icon name="check" size={10} />}
+                      </span>
+                      <span className="text-sm font-semibold text-ink">
+                        IPL {formatPeriod(r.year, r.month)}
+                      </span>
+                      {r.kind === "FUTURE" && (
+                        <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                          Titipan
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-ink">
+                      {formatRupiah(r.amount)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Tagihan list */}
       <section className="mt-5 px-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink">Tagihan IPL</h2>
+          <h2 className="text-base font-bold text-ink">Tagihan IPL (Sampai Bulan Ini)</h2>
           <button
             type="button"
             onClick={toggleAll}
@@ -265,48 +361,7 @@ function ActiveBills({
                       <p className="text-sm font-bold text-ink">
                         IPL {formatPeriod(bill.year, bill.month)}
                       </p>
-                      <p className="text-[11px] text-ink-faint">
-                        Iuran Pemeliharaan Lingkungan
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-sm font-extrabold text-ink">
-                    {formatRupiah(bill.amount)}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-
-          {futureBills.map((bill) => {
-            const active = selectedFutureMonths.includes(bill.month);
-            return (
-              <button
-                key={`future-${bill.year}-${bill.month}`}
-                type="button"
-                onClick={() => toggleFuture(bill.month)}
-                className={`card w-full p-4 text-left transition ${
-                  active ? "ring-2 ring-pelican-500" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                        active
-                          ? "border-pelican-500 bg-pelican-500 text-white"
-                          : "border-black/15"
-                      }`}
-                    >
-                      {active && <Icon name="check" size={12} />}
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-ink">
-                        IPL {formatPeriod(bill.year, bill.month)}
-                      </p>
-                      <p className="text-[11px] text-ink-faint">
-                        Iuran Pemeliharaan Lingkungan (Bukan Tunggakan)
-                      </p>
+                      <p className="text-[11px] text-ink-faint">Iuran Pemeliharaan Lingkungan</p>
                     </div>
                   </div>
                   <p className="text-sm font-extrabold text-ink">
