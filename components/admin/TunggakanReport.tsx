@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { formatPeriod, formatRupiah } from "@/lib/format";
@@ -26,10 +27,36 @@ export function TunggakanReport({
   totalPiutang: number;
 }) {
   const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<number[]>(rows.map((r) => r.id));
+
+  useEffect(() => {
+    setSelectedIds(rows.map((r) => r.id));
+  }, [rows]);
+
+  const selectedRows = useMemo(
+    () => rows.filter((r) => selectedIds.includes(r.id)),
+    [rows, selectedIds]
+  );
+  const selectedTotal = selectedRows.reduce((s, r) => s + r.total, 0);
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+
+  function toggleRow(id: number) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function selectAll() {
+    setSelectedIds(rows.map((r) => r.id));
+  }
+
+  function clearAll() {
+    setSelectedIds([]);
+  }
 
   function exportCsv() {
     const header = ["Rumah", "Pemilik", "Jumlah Bulan", "Total Tunggakan", "Rincian"];
-    const lines = rows.map((r) =>
+    const lines = selectedRows.map((r) =>
       [
         `${r.block} No ${r.no}`,
         r.ownerName ?? "",
@@ -51,10 +78,10 @@ export function TunggakanReport({
   return (
     <div>
       {/* Filter & aksi */}
-      <div className="card mb-6 flex flex-wrap items-end gap-3 p-4 print:hidden">
-        <div>
+      <div className="card mb-4 space-y-4 p-4 print:hidden">
+        <div className="max-w-sm">
           <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
-            Filter Blok
+            Filter Berdasarkan Blok
           </label>
           <select
             value={selectedBlock}
@@ -69,7 +96,27 @@ export function TunggakanReport({
             ))}
           </select>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={selectAll}
+            className="rounded-lg border border-black/20 bg-white px-3 py-2 text-sm font-semibold text-ink-soft"
+          >
+            PILIH SEMUA
+          </button>
+          <button
+            type="button"
+            onClick={clearAll}
+            className="rounded-lg border border-black/20 bg-black/5 px-3 py-2 text-sm font-semibold text-ink-faint"
+          >
+            BATAL PILIH SEMUA
+          </button>
+          <p className="self-center text-sm text-ink-soft">
+            ({selectedIds.length} dari {rows.length} dipilih)
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           <button onClick={exportCsv} className="btn-ghost">
             <Icon name="receipt" size={18} />
             Excel
@@ -85,12 +132,12 @@ export function TunggakanReport({
       <div className="mb-6 grid grid-cols-2 gap-3">
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Rumah Menunggak</p>
-          <p className="mt-1 text-2xl font-extrabold text-ink">{rows.length}</p>
+          <p className="mt-1 text-2xl font-extrabold text-ink">{selectedRows.length}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Total Piutang</p>
           <p className="mt-1 text-2xl font-extrabold text-red-500">
-            {formatRupiah(totalPiutang)}
+            {formatRupiah(selectedTotal)}
           </p>
         </div>
       </div>
@@ -99,10 +146,48 @@ export function TunggakanReport({
         Daftar Tunggakan{selectedBlock !== "SEMUA" ? ` — ${selectedBlock}` : ""}
       </h2>
 
-      <div className="card overflow-hidden">
+      <div className="space-y-3 md:hidden">
+        {selectedRows.map((r) => (
+          <button
+            key={`mobile-${r.id}`}
+            type="button"
+            onClick={() => toggleRow(r.id)}
+            className={`card w-full p-4 text-left transition ${
+              selectedIds.includes(r.id) ? "ring-1 ring-pelican-500" : ""
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
+                  selectedIds.includes(r.id)
+                    ? "border-pelican-500 bg-pelican-500 text-white"
+                    : "border-black/20"
+                }`}
+              >
+                {selectedIds.includes(r.id) && <Icon name="check" size={12} />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-extrabold text-ink">
+                  {r.block} No {r.no}
+                </p>
+                <p className="text-base text-ink-soft">{r.ownerName ?? "Belum pengkinian data"}</p>
+                <p className="mt-1 text-lg font-bold text-red-500">
+                  {r.months} bulan - {formatRupiah(r.total)}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-faint">
+                  {r.bills.map((b) => formatPeriod(b.year, b.month)).join(", ")}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden card md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>
+              <th className="px-4 py-3 w-12">Pilih</th>
               <th className="px-4 py-3">Rumah</th>
               <th className="px-4 py-3">Pemilik</th>
               <th className="px-4 py-3">Bulan</th>
@@ -110,8 +195,16 @@ export function TunggakanReport({
             </tr>
           </thead>
           <tbody className="divide-y divide-black/5">
-            {rows.map((r) => (
+            {selectedRows.map((r) => (
               <tr key={r.id}>
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(r.id)}
+                    onChange={() => toggleRow(r.id)}
+                    className="h-4 w-4 accent-pelican-600"
+                  />
+                </td>
                 <td className="px-4 py-3 font-semibold text-ink whitespace-nowrap">
                   {r.block} No {r.no}
                 </td>
@@ -132,21 +225,27 @@ export function TunggakanReport({
           </tbody>
           <tfoot className="border-t border-black/5 bg-black/[0.02] text-sm font-bold">
             <tr>
-              <td className="px-4 py-3" colSpan={3}>
-                Total Piutang ({rows.length} rumah)
+              <td className="px-4 py-3" colSpan={4}>
+                Total Piutang ({selectedRows.length} rumah)
               </td>
               <td className="px-4 py-3 text-right text-red-500">
-                {formatRupiah(totalPiutang)}
+                {formatRupiah(selectedTotal)}
               </td>
             </tr>
           </tfoot>
         </table>
-        {rows.length === 0 && (
+        {selectedRows.length === 0 && (
           <p className="p-8 text-center text-sm text-ink-faint">
-            Tidak ada tunggakan. Semua rumah lunas. 🎉
+            Tidak ada tunggakan. Semua rumah lunas.
           </p>
         )}
       </div>
+
+      {selectedRows.length === 0 && (
+        <div className="card p-8 text-center text-sm text-ink-faint md:hidden">
+          Tidak ada data terpilih.
+        </div>
+      )}
     </div>
   );
 }
