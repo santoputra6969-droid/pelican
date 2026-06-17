@@ -78,10 +78,15 @@ export function AdminTransaksiTable({
       .map((t, index) => {
         const masuk = t.mutation === "DEBIT";
         const description = t.notes?.trim() || t.type || (masuk ? "Pemasukan" : "Pengeluaran");
+        const printDate = new Date(t.date).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
         return `
           <tr>
             <td class="col-no tc">${index + 1}</td>
-            <td class="col-date nw">${escapeHtml(formatDateTime(t.date))}</td>
+            <td class="col-date nw">${escapeHtml(printDate)}</td>
             <td class="col-desc">${escapeHtml(description)}</td>
             <td class="col-amount tr nw">${masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
             <td class="col-amount tr nw">${!masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
