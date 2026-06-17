@@ -274,6 +274,7 @@ function ActiveBills({
       toggle: () => toggleFuture(b.month),
     })),
   ].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year));
+  const oldestBillId = orderedBills[0]?.id ?? null;
 
   return (
     <>
@@ -344,34 +345,23 @@ function ActiveBills({
       <section className="mt-5 px-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-bold text-ink">Tagihan IPL (Sampai Bulan Ini)</h2>
-          <button
-            type="button"
-            onClick={toggleAll}
-            className="flex items-center gap-2 text-xs font-bold text-pelican-700"
-          >
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded-md border ${
-                allSelected
-                  ? "border-pelican-500 bg-pelican-500 text-white"
-                  : "border-black/20"
-              }`}
-            >
-              {allSelected && <Icon name="check" size={12} />}
-            </span>
-            Pilih Semua
-          </button>
+          <p className="max-w-[12rem] text-right text-[11px] font-semibold text-ink-faint">
+            Pelunasan banyak bulan hanya lewat Bayar Sekaligus
+          </p>
         </div>
         <div className="space-y-3">
-          {orderedBills.map((bill) => {
+          {orderedBills.map((bill, index) => {
             const active = selectedIds.includes(bill.id);
+            const canSelectDirect = bill.id === oldestBillId;
             return (
               <button
                 key={bill.id}
                 type="button"
-                onClick={() => toggleBill(bill.id)}
+                onClick={() => canSelectDirect && toggleBill(bill.id)}
+                disabled={!canSelectDirect}
                 className={`card w-full p-4 text-left transition ${
                   active ? "ring-2 ring-pelican-500" : ""
-                }`}
+                } ${canSelectDirect ? "" : "cursor-not-allowed opacity-55 saturate-0"}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -379,7 +369,9 @@ function ActiveBills({
                       className={`flex h-5 w-5 items-center justify-center rounded-md border ${
                         active
                           ? "border-pelican-500 bg-pelican-500 text-white"
-                          : "border-black/15"
+                          : canSelectDirect
+                            ? "border-black/15"
+                            : "border-black/10 bg-black/5"
                       }`}
                     >
                       {active && <Icon name="check" size={12} />}
@@ -389,6 +381,11 @@ function ActiveBills({
                         IPL {formatPeriod(bill.year, bill.month)}
                       </p>
                       <p className="text-[11px] text-ink-faint">Iuran Pemeliharaan Lingkungan</p>
+                      {!canSelectDirect && (
+                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                          Pilih lewat Bayar Sekaligus
+                        </p>
+                      )}
                     </div>
                   </div>
                   <p className="text-sm font-extrabold text-ink">
