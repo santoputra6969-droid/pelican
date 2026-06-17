@@ -28,9 +28,11 @@ export function TunggakanReport({
 }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>(rows.map((r) => r.id));
+  const [expandedIds, setExpandedIds] = useState<number[]>([]);
 
   useEffect(() => {
     setSelectedIds(rows.map((r) => r.id));
+    setExpandedIds([]);
   }, [rows]);
 
   const selectedRows = useMemo(
@@ -42,6 +44,12 @@ export function TunggakanReport({
 
   function toggleRow(id: number) {
     setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleExpand(id: number) {
+    setExpandedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
@@ -148,10 +156,8 @@ export function TunggakanReport({
 
       <div className="space-y-3 md:hidden">
         {selectedRows.map((r) => (
-          <button
+          <div
             key={`mobile-${r.id}`}
-            type="button"
-            onClick={() => toggleRow(r.id)}
             className={`card w-full p-4 text-left transition ${
               selectedIds.includes(r.id) ? "ring-1 ring-pelican-500" : ""
             }`}
@@ -164,7 +170,12 @@ export function TunggakanReport({
                     : "border-black/20"
                 }`}
               >
-                {selectedIds.includes(r.id) && <Icon name="check" size={12} />}
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(r.id)}
+                  onChange={() => toggleRow(r.id)}
+                  className="h-4 w-4 accent-pelican-600"
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xl font-extrabold text-ink">
@@ -174,12 +185,39 @@ export function TunggakanReport({
                 <p className="mt-1 text-lg font-bold text-red-500">
                   {r.months} bulan - {formatRupiah(r.total)}
                 </p>
-                <p className="mt-0.5 text-xs text-ink-faint">
-                  {r.bills.map((b) => formatPeriod(b.year, b.month)).join(", ")}
-                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => toggleExpand(r.id)}
+                className="rounded-md p-1 text-ink-faint"
+                aria-label="Lihat detail bulan"
+              >
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  className={expandedIds.includes(r.id) ? "rotate-90" : ""}
+                />
+              </button>
             </div>
-          </button>
+
+            {expandedIds.includes(r.id) && (
+              <div className="mt-4 space-y-2">
+                {r.bills.map((b, idx) => (
+                  <div
+                    key={`${r.id}-${b.year}-${b.month}-${idx}`}
+                    className="rounded-lg border border-black/10 bg-white p-3"
+                  >
+                    <p className="text-2xl font-semibold text-ink">
+                      Bulan {b.month} Tahun {b.year}
+                    </p>
+                    <p className="text-lg text-ink-soft">
+                      Nominal: <span className="font-semibold text-ink">{formatRupiah(b.amount)}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
