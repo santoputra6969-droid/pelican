@@ -61,8 +61,205 @@ export function AdminTransaksiTable({
     URL.revokeObjectURL(url);
   }
 
+  function escapeHtml(value: string) {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function buildPrintHtml() {
+    const kopUrl = `${window.location.origin}/kop-surat.png`;
+    const rowsHtml = filtered
+      .map((t, index) => {
+        const masuk = t.mutation === "DEBIT";
+        const description = t.notes?.trim() || t.type || (masuk ? "Pemasukan" : "Pengeluaran");
+        return `
+          <tr>
+            <td class="col-no tc">${index + 1}</td>
+            <td class="col-date nw">${escapeHtml(formatDateTime(t.date))}</td>
+            <td class="col-desc">${escapeHtml(description)}</td>
+            <td class="col-amount tr nw">${masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
+            <td class="col-amount tr nw">${!masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    const totalMasuk = filtered
+      .filter((t) => t.mutation === "DEBIT")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalKeluar = filtered
+      .filter((t) => t.mutation !== "DEBIT")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return `
+      <!doctype html>
+      <html lang="id">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${escapeHtml(title)}</title>
+          <style>
+            @page { size: A4; margin: 8mm; }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              color: #111;
+              font-family: Arial, Helvetica, sans-serif;
+            }
+            .sheet {
+              width: 100%;
+            }
+            .kop {
+              width: 100%;
+              display: block;
+              margin-bottom: 8px;
+            }
+            .title {
+              margin: 0;
+              font-size: 18px;
+              font-weight: 700;
+              text-align: center;
+            }
+            .subtitle {
+              margin: 4px 0 12px;
+              font-size: 11px;
+              text-align: center;
+            }
+            .summary {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 6px;
+              margin-bottom: 10px;
+            }
+            .summary div {
+              border: 1px solid #d1d5db;
+              padding: 6px 8px;
+              font-size: 10px;
+            }
+            .summary strong {
+              display: block;
+              margin-top: 2px;
+              font-size: 12px;
+            }
+            .label {
+              color: #6b7280;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+            }
+            th, td {
+              border: 1px solid #d1d5db;
+              padding: 4px 6px;
+              font-size: 10px;
+              line-height: 1.25;
+              vertical-align: top;
+            }
+            thead th {
+              background: #ffeb3b;
+              font-weight: 700;
+              text-align: left;
+            }
+            .tc { text-align: center; }
+            .tr { text-align: right; }
+            .nw { white-space: nowrap; }
+            .col-no { width: 7%; }
+            .col-date { width: 18%; }
+            .col-desc { width: 47%; }
+            .col-amount { width: 14%; }
+            tr { page-break-inside: avoid; }
+            thead { display: table-header-group; }
+            tfoot { display: table-row-group; }
+            .footer {
+              margin-top: 10px;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 24px;
+              font-size: 11px;
+            }
+            .sign {
+              text-align: center;
+            }
+            .sign .space {
+              height: 18mm;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="sheet">
+            <img class="kop" src="${kopUrl}" alt="Kop Surat" />
+            <h1 class="title">${escapeHtml(title)}</h1>
+            <p class="subtitle">${escapeHtml(subtitle)}</p>
+
+            <div class="summary">
+              <div><span class="label">Total Transaksi</span><strong>${filtered.length}</strong></div>
+              <div><span class="label">Total Pemasukan</span><strong>${escapeHtml(formatRupiah(totalMasuk))}</strong></div>
+              <div><span class="label">Total Pengeluaran</span><strong>${escapeHtml(formatRupiah(totalKeluar))}</strong></div>
+              <div><span class="label">Saldo Bersih</span><strong>${escapeHtml(formatRupiah(totalMasuk - totalKeluar))}</strong></div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th class="col-no tc">No</th>
+                  <th class="col-date">Tanggal</th>
+                  <th class="col-desc">Keterangan</th>
+                  <th class="col-amount tr">Uang Masuk</th>
+                  <th class="col-amount tr">Uang Keluar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <div class="sign">
+                <div>Dibuat oleh,</div>
+                <div class="space"></div>
+                <div>Admin / Bendahara</div>
+              </div>
+              <div class="sign">
+                <div>Mengetahui,</div>
+                <div class="space"></div>
+                <div>Ketua Pengelola</div>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.addEventListener('load', function () {
+              setTimeout(function () {
+                window.print();
+              }, 250);
+            });
+          </script>
+        </body>
+      </html>
+    `;
+  }
+
   function printPdf() {
-    printWithIOSClass();
+    if (typeof window === "undefined") return;
+    const win = window.open("", "_blank");
+    if (!win) {
+      printWithIOSClass();
+      return;
+    }
+
+    win.document.open();
+    win.document.write(buildPrintHtml());
+    win.document.close();
   }
 
   return (
