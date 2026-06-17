@@ -37,6 +37,7 @@ export function BukuKasReport({
   const categoryLabel =
     category === "SEMUA" ? "Semua Kas" : category === "PKK" ? "Kas PKK" : "Kas Utama";
   const printedAt = new Date();
+  const [kopSrc, setKopSrc] = useState("/kop-surat.png");
   const [kopOk, setKopOk] = useState(true);
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
@@ -81,7 +82,7 @@ export function BukuKasReport({
   }
 
   return (
-    <div>
+    <div className="bukukas-report">
       {/* Filter periode */}
       <div className="card mb-6 flex flex-wrap items-end gap-3 p-4 print:hidden">
         <div>
@@ -141,10 +142,16 @@ export function BukuKasReport({
         <div className="print-report__header print-only">
           {kopOk ? (
             <img
-              src="/kop-surat.png"
+              src={kopSrc}
               alt="Kop Surat Cluster Puri Pelican"
               className="print-kop-image"
-              onError={() => setKopOk(false)}
+              onError={() => {
+                if (kopSrc.endsWith(".png")) {
+                  setKopSrc("/kop-surat.jpg");
+                  return;
+                }
+                setKopOk(false);
+              }}
             />
           ) : (
             <>
@@ -166,10 +173,10 @@ export function BukuKasReport({
           </p>
         </div>
 
-        <h2 className="text-lg font-bold text-ink">
+        <h2 className="text-lg font-bold text-ink screen-only">
           Buku Kas — {formatPeriod(year, month)}
         </h2>
-        <p className="text-xs text-ink-soft">
+        <p className="text-xs text-ink-soft screen-only">
           Kategori: {categoryLabel}
         </p>
       </div>

@@ -80,6 +80,10 @@ body {
   display: none;
 }
 
+.screen-only {
+  display: block;
+}
+
 @media print {
   @page {
     size: A4;
@@ -93,6 +97,28 @@ body {
 
   .print-only {
     display: block !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  aside {
+    display: none !important;
+  }
+
+  main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .bukukas-page {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .bukukas-report {
+    max-width: 100% !important;
   }
 
   .card {

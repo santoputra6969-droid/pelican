@@ -47,11 +47,13 @@ export default async function AdminBukuKasPage({
     .reduce((s, t) => s + t.amount, 0);
 
   return (
-    <div className="px-5 py-6 lg:px-8">
-      <AdminPageHeader
-        title="Buku Kas"
-        subtitle="Laporan kas bulanan — saldo awal, pemasukan, pengeluaran"
-      />
+    <div className="bukukas-page px-5 py-6 lg:px-8">
+      <div className="print:hidden">
+        <AdminPageHeader
+          title="Buku Kas"
+          subtitle="Laporan kas bulanan — saldo awal, pemasukan, pengeluaran"
+        />
+      </div>
       <BukuKasReport
         year={year}
         month={month}
