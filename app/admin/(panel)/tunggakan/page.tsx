@@ -55,10 +55,12 @@ export default async function AdminTunggakanPage({
 
   return (
     <div className="px-5 py-6 lg:px-8">
-      <AdminPageHeader
-        title="Tunggakan IPL"
-        subtitle="Daftar rumah yang menunggak iuran IPL"
-      />
+      <div className="print:hidden">
+        <AdminPageHeader
+          title="Tunggakan IPL"
+          subtitle="Daftar rumah yang menunggak iuran IPL"
+        />
+      </div>
       <TunggakanReport
         rows={rows}
         blocks={blocks.map((b) => b.block)}
