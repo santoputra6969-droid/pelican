@@ -101,11 +101,6 @@ export function ResidentForm({
     <form ref={formRef} action={formAction} className="card space-y-4 p-5">
       <input type="hidden" name="members" value={JSON.stringify(members)} />
 
-      <div className="rounded-xl border border-[#1f97ef] bg-[#e8f4ff] px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
-        Kami sangat menghargai privasi Anda. Data yang di-submit tidak dapat diakses publik,
-        dan hanya digunakan pengurus RT untuk pendataan administratif digital.
-      </div>
-
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Blok Rumah *</label>
         <select
