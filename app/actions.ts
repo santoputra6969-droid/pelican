@@ -150,7 +150,9 @@ export async function createPayment(
     where: { id: { in: billIds }, houseId, status: { not: "PAID" } },
     orderBy: [{ year: "asc" }, { month: "asc" }],
   });
-  if (bills.length === 0 && !hasAdvance)
+  let payableBills = [...bills];
+
+  if (payableBills.length === 0 && !hasAdvance)
     return { ok: false, message: "Tidak ada tagihan yang bisa dibayar." };
 
   let validAdvance: { year: number; month: number; amount: number }[] = [];
@@ -164,28 +166,40 @@ export async function createPayment(
     );
     const existing = await prisma.bill.findMany({
       where: { houseId, year: advanceYear, month: { in: uniqueMonths } },
-      select: { month: true },
     });
-    const existingSet = new Set(existing.map((x) => x.month));
-    const invalidMonths = uniqueMonths.filter((m) => existingSet.has(m));
-    if (invalidMonths.length > 0) {
+    const paidExisting = existing.filter((x) => x.status === "PAID");
+    if (paidExisting.length > 0) {
       return {
         ok: false,
         message:
           "Sebagian bulan titipan sudah memiliki tagihan. Silakan refresh lalu pilih ulang.",
       };
     }
+
+    const payableSet = new Set(payableBills.map((b) => b.id));
+    for (const row of existing) {
+      if (row.status !== "PAID" && !payableSet.has(row.id)) {
+        payableBills.push(row);
+        payableSet.add(row.id);
+      }
+    }
+
+    const existingSet = new Set(existing.map((x) => x.month));
     validAdvance = uniqueMonths
       .filter((m) => !existingSet.has(m))
       .map((month) => ({ year: advanceYear, month, amount: house.iplAmount }));
   }
 
-  if (bills.length === 0 && validAdvance.length === 0) {
+  payableBills = payableBills.sort((a, b) =>
+    a.year === b.year ? a.month - b.month : a.year - b.year
+  );
+
+  if (payableBills.length === 0 && validAdvance.length === 0) {
     return { ok: false, message: "Tidak ada item pembayaran yang valid." };
   }
 
   const total =
-    bills.reduce((sum, b) => sum + b.amount, 0) +
+    payableBills.reduce((sum, b) => sum + b.amount, 0) +
     validAdvance.reduce((sum, a) => sum + a.amount, 0);
   const orderId = `IPL-${houseId}-${Date.now()}-${Math.floor(
     Math.random() * 1000
@@ -194,7 +208,7 @@ export async function createPayment(
     .padStart(3, "0")}`;
 
   const items = [
-    ...bills.map((b) => ({
+    ...payableBills.map((b) => ({
       id: `B-${b.id}`,
       price: b.amount,
       quantity: 1,
@@ -217,7 +231,7 @@ export async function createPayment(
         orderId,
         houseId,
         billIds: [
-          ...bills.map((b) => `B${b.id}`),
+          ...payableBills.map((b) => `B${b.id}`),
           ...validAdvance.map(
             (a) => `A${a.year}-${String(a.month).padStart(2, "0")}`
           ),
