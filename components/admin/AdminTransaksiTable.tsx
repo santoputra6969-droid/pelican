@@ -328,7 +328,7 @@ export function AdminTransaksiTable({
       </div>
 
       {/* Desktop */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden overflow-x-auto print:block md:block">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>

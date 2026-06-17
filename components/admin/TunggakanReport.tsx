@@ -396,7 +396,7 @@ export function TunggakanReport({
       </div>
 
       {/* Ringkasan */}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-3 print:hidden sm:grid-cols-2">
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Rumah Menunggak</p>
           <p className="mt-1 text-2xl font-extrabold text-ink">{selectedRows.length}</p>
@@ -409,7 +409,7 @@ export function TunggakanReport({
         </div>
       </div>
 
-      <h2 className="mb-3 text-lg font-bold text-ink">
+      <h2 className="mb-3 text-lg font-bold text-ink print:hidden">
         Daftar {reportLabel}{selectedBlock !== "SEMUA" ? ` — ${selectedBlock}` : ""}
       </h2>
 

@@ -241,7 +241,7 @@ export function BukuKasReport({
       </div>
 
       {/* Tabel transaksi desktop */}
-      <div className="card hidden overflow-hidden md:block print-table-wrap">
+      <div className="card hidden overflow-hidden print:block md:block print-table-wrap">
         <table className="w-full text-left text-sm print-table">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>

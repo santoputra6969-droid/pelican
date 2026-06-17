@@ -218,12 +218,6 @@ body {
     overflow: visible !important;
   }
 
-  /* Ensure desktop print tables remain visible across Android browsers. */
-  .hidden.md\:block,
-  .md\:block.hidden {
-    display: block !important;
-  }
-
   /* Keep mobile-only blocks hidden in print. */
   .md\:hidden {
     display: none !important;
