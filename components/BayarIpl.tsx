@@ -212,10 +212,6 @@ function ActiveBills({
   const baseTotal = selectedBills.reduce((sum, b) => sum + b.amount, 0);
   const futureTotal = selectedFuture.reduce((sum, b) => sum + b.amount, 0);
   const total = baseTotal + futureTotal;
-  const allSelected =
-    bills.length + futureBills.length > 0 &&
-    selectedIds.length === bills.length &&
-    selectedFutureMonths.length === futureBills.length;
 
   const toggleBill = (id: number) => {
     const targetIndex = orderedBills.findIndex((bill) => bill.id === id);
@@ -229,16 +225,6 @@ function ActiveBills({
     if (nextSelectedIds.length !== orderedBills.length) {
       setSelectedFutureMonths([]);
     }
-  };
-
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelectedIds([]);
-      setSelectedFutureMonths([]);
-      return;
-    }
-    setSelectedIds(orderedBills.map((b) => b.id));
-    setSelectedFutureMonths(orderedFutureBills.map((b) => b.month));
   };
 
   const toggleFuture = (month: number) => {
@@ -279,7 +265,7 @@ function ActiveBills({
   return (
     <>
       {/* Bayar Sekaligus */}
-      <section className="mt-4 px-5">
+      <section className="mt-4 flex justify-center px-5">
         <button
           type="button"
           onClick={() => setBulkOpen(!bulkOpen)}
@@ -292,16 +278,7 @@ function ActiveBills({
       {bulkOpen && (
         <section className="mt-3 px-5">
           <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-bold text-ink">Pilih Bulan Pembayaran</p>
-              <button
-                type="button"
-                onClick={toggleAll}
-                className="text-xs font-bold text-pelican-700"
-              >
-                {allSelected ? "Batal Pilih Semua" : "Pilih Semua"}
-              </button>
-            </div>
+            <p className="mb-3 text-sm font-bold text-ink">Pilih Bulan Pembayaran</p>
 
             <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
               {bulkRows.map((r) => (
