@@ -189,8 +189,54 @@ export function BukuKasReport({
         <Summary label="Saldo Akhir" value={saldoAkhir} tone="ink" strong />
       </div>
 
-      {/* Tabel transaksi */}
-      <div className="card overflow-hidden print-table-wrap">
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((r) => {
+          const masuk = r.mutation === "DEBIT";
+          return (
+            <div key={r.id} className="card overflow-hidden p-4">
+              <div className="grid grid-cols-[1.1fr_1.6fr_0.7fr] gap-3 border-b border-black/5 pb-3 text-[11px] font-semibold text-ink-faint">
+                <div>Tanggal</div>
+                <div>Keterangan</div>
+                <div className="text-right">Kategori</div>
+              </div>
+
+              <div className="grid grid-cols-[1.1fr_1.6fr_0.7fr] gap-3 py-3 text-sm">
+                <div className="text-ink-soft whitespace-nowrap">{formatDateTime(r.createdAt)}</div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">{r.type ?? "Transaksi"}</p>
+                  {r.notes && <p className="mt-0.5 text-[11px] leading-snug text-ink-faint">{r.notes}</p>}
+                </div>
+                <div className="text-right text-xs font-medium text-ink-faint">{r.category}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 text-sm">
+                <div>
+                  <p className="text-[11px] text-ink-faint">Uang Masuk</p>
+                  <p className={`font-semibold ${masuk ? "text-pelican-700" : "text-ink-soft"}`}>
+                    {masuk ? formatRupiah(r.amount) : "—"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-ink-faint">Uang Keluar</p>
+                  <p className={`font-semibold ${!masuk ? "text-red-500" : "text-ink-soft"}`}>
+                    {!masuk ? formatRupiah(r.amount) : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {rows.length === 0 && (
+          <p className="p-8 text-center text-sm text-ink-faint">
+            Belum ada transaksi pada periode ini.
+          </p>
+        )}
+      </div>
+
+      {/* Tabel transaksi desktop */}
+      <div className="card hidden overflow-hidden md:block print-table-wrap">
         <table className="w-full text-left text-sm print-table">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>
