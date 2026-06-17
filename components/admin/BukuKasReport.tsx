@@ -33,6 +33,9 @@ export function BukuKasReport({
 }) {
   const router = useRouter();
   const saldoAkhir = saldoAwal + totalMasuk - totalKeluar;
+  const categoryLabel =
+    category === "SEMUA" ? "Semua Kas" : category === "PKK" ? "Kas PKK" : "Kas Utama";
+  const printedAt = new Date();
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
@@ -132,17 +135,34 @@ export function BukuKasReport({
       </div>
 
       {/* Judul cetak */}
-      <div className="mb-4">
+      <div className="print-report mb-4">
+        <div className="print-report__header print-only">
+          <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
+          <p className="print-report__title">LAPORAN BUKU KAS</p>
+          <p className="print-report__subtitle">Periode {formatPeriod(year, month)}</p>
+        </div>
+
+        <div className="print-report__meta print-only">
+          <p>
+            <span>Kategori</span>
+            <strong>{categoryLabel}</strong>
+          </p>
+          <p>
+            <span>Tanggal Cetak</span>
+            <strong>{formatDateTime(printedAt)}</strong>
+          </p>
+        </div>
+
         <h2 className="text-lg font-bold text-ink">
           Buku Kas — {formatPeriod(year, month)}
         </h2>
         <p className="text-xs text-ink-soft">
-          Kategori: {category === "SEMUA" ? "Semua Kas" : category === "PKK" ? "Kas PKK" : "Kas Utama"}
+          Kategori: {categoryLabel}
         </p>
       </div>
 
       {/* Ringkasan */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 print-summary-grid">
         <Summary label="Saldo Awal" value={saldoAwal} tone="ink" />
         <Summary label="Pemasukan" value={totalMasuk} tone="green" />
         <Summary label="Pengeluaran" value={totalKeluar} tone="red" />
@@ -150,12 +170,13 @@ export function BukuKasReport({
       </div>
 
       {/* Tabel transaksi */}
-      <div className="card overflow-hidden">
-        <table className="w-full text-left text-sm">
+      <div className="card overflow-hidden print-table-wrap">
+        <table className="w-full text-left text-sm print-table">
           <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
             <tr>
               <th className="px-4 py-3">Tanggal</th>
               <th className="px-4 py-3">Keterangan</th>
+              <th className="px-4 py-3 text-center">Kategori</th>
               <th className="px-4 py-3 text-right">Masuk</th>
               <th className="px-4 py-3 text-right">Keluar</th>
             </tr>
@@ -169,8 +190,8 @@ export function BukuKasReport({
                 <td className="px-4 py-3">
                   <p className="font-medium text-ink">{r.type ?? "Transaksi"}</p>
                   {r.notes && <p className="text-[11px] text-ink-faint">{r.notes}</p>}
-                  <span className="text-[10px] text-ink-faint">{r.category}</span>
                 </td>
+                <td className="px-4 py-3 text-center text-xs text-ink-faint">{r.category}</td>
                 <td className="px-4 py-3 text-right font-semibold text-pelican-700">
                   {r.mutation === "DEBIT" ? formatRupiah(r.amount) : "—"}
                 </td>
@@ -182,7 +203,7 @@ export function BukuKasReport({
           </tbody>
           <tfoot className="border-t border-black/5 bg-black/[0.02] text-sm font-bold">
             <tr>
-              <td className="px-4 py-3" colSpan={2}>
+              <td className="px-4 py-3" colSpan={3}>
                 Total
               </td>
               <td className="px-4 py-3 text-right text-pelican-700">
@@ -199,6 +220,19 @@ export function BukuKasReport({
             Belum ada transaksi pada periode ini.
           </p>
         )}
+      </div>
+
+      <div className="print-signatures print-only">
+        <div className="print-signatures__item">
+          <p>Dibuat oleh,</p>
+          <div />
+          <p>Admin / Bendahara</p>
+        </div>
+        <div className="print-signatures__item">
+          <p>Mengetahui,</p>
+          <div />
+          <p>Ketua Pengelola</p>
+        </div>
       </div>
     </div>
   );
@@ -218,7 +252,7 @@ function Summary({
   const color =
     tone === "green" ? "text-pelican-700" : tone === "red" ? "text-red-500" : "text-ink";
   return (
-    <div className="card p-4">
+    <div className="card p-4 print-summary-card">
       <p className="text-xs text-ink-faint">{label}</p>
       <p className={`mt-1 ${strong ? "text-xl" : "text-lg"} font-extrabold ${color}`}>
         {formatRupiah(value)}
