@@ -48,10 +48,12 @@ export async function getCommunityFeeRows({
   feeType,
   selectedBlock,
   selectedYear,
+  includeAllYears = false,
 }: {
   feeType: CommunityFeeType;
   selectedBlock: string;
-  selectedYear: number;
+  selectedYear?: number;
+  includeAllYears?: boolean;
 }) {
   const houseWhere = {
     ...(selectedBlock !== "SEMUA" ? { block: selectedBlock } : {}),
@@ -104,9 +106,19 @@ export async function getCommunityFeeRows({
     for (const p of periods) set.add(toKey(p.year, p.month));
   }
 
+  const paidYears = txs
+    .flatMap((tx) => parsePeriods(tx.notes).map((p) => p.year))
+    .filter((y) => Number.isInteger(y));
+
   const now = new Date();
   const nowYear = now.getFullYear();
-  const limitMonth = selectedYear === nowYear ? now.getMonth() + 1 : 12;
+  const targetYear = selectedYear ?? nowYear;
+  const firstYear =
+    includeAllYears && paidYears.length > 0
+      ? Math.min(...paidYears, nowYear)
+      : targetYear;
+
+  const limitMonth = (year: number) => (year === nowYear ? now.getMonth() + 1 : 12);
 
   const rows: CommunityRow[] = [];
   for (const h of houses) {
@@ -115,9 +127,11 @@ export async function getCommunityFeeRows({
     const paid = paidByHouse.get(houseKey) ?? new Set<string>();
 
     const bills: { year: number; month: number; amount: number }[] = [];
-    for (let month = 1; month <= limitMonth; month += 1) {
-      const k = toKey(selectedYear, month);
-      if (!paid.has(k)) bills.push({ year: selectedYear, month, amount });
+    for (let year = firstYear; year <= targetYear; year += 1) {
+      for (let month = 1; month <= limitMonth(year); month += 1) {
+        const k = toKey(year, month);
+        if (!paid.has(k)) bills.push({ year, month, amount });
+      }
     }
 
     if (bills.length === 0) continue;

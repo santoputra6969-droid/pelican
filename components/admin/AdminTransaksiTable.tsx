@@ -15,7 +15,15 @@ type Row = {
   date: string;
 };
 
-export function AdminTransaksiTable({ transactions }: { transactions: Row[] }) {
+export function AdminTransaksiTable({
+  transactions,
+  title = "Daftar Transaksi",
+  subtitle = "Laporan transaksi kas",
+}: {
+  transactions: Row[];
+  title?: string;
+  subtitle?: string;
+}) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -29,9 +37,43 @@ export function AdminTransaksiTable({ transactions }: { transactions: Row[] }) {
     );
   }, [transactions, query]);
 
+  function exportCsv() {
+    const header = ["Tanggal", "Kategori", "Mutasi", "Jenis", "Catatan", "Petugas", "Nominal"];
+    const lines = filtered.map((t) =>
+      [
+        formatDateTime(t.date),
+        t.category,
+        t.mutation,
+        t.type ?? "",
+        t.notes ?? "",
+        t.createdBy ?? "",
+        t.amount,
+      ].join(";")
+    );
+    const csv = [header.join(";"), ...lines].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transaksi-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function printPdf() {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+    window.requestAnimationFrame(() => window.print());
+  }
+
   return (
     <div className="card overflow-hidden">
-      <div className="border-b border-black/5 p-4">
+      <div className="print-only border-b border-black/15 p-3 text-center">
+        <p className="text-base font-bold text-black">{title}</p>
+        <p className="text-xs text-black">{subtitle}</p>
+      </div>
+
+      <div className="border-b border-black/5 p-4 print:hidden">
         <div className="relative max-w-sm">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint">
             <Icon name="search" size={18} />
@@ -42,6 +84,22 @@ export function AdminTransaksiTable({ transactions }: { transactions: Row[] }) {
             placeholder="Cari tipe, catatan, petugas..."
             className="input pl-11"
           />
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="rounded-lg bg-[#1f97ef] px-3 py-2 text-sm font-semibold text-white"
+          >
+            TO EXCEL
+          </button>
+          <button
+            type="button"
+            onClick={printPdf}
+            className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white"
+          >
+            TO PDF
+          </button>
         </div>
       </div>
 

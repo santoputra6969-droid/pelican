@@ -7,9 +7,40 @@ import { Icon } from "@/components/Icon";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminTransaksiPage() {
+export default async function AdminTransaksiPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    from?: string;
+    to?: string;
+    category?: string;
+    mutation?: string;
+  }>;
+}) {
+  const sp = await searchParams;
+  const today = new Date();
+  const toDefault = today.toISOString().slice(0, 10);
+  const fromDefault = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(sp.from ?? "") ? (sp.from as string) : fromDefault;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(sp.to ?? "") ? (sp.to as string) : toDefault;
+  const category = sp.category === "UTAMA" || sp.category === "PKK" ? sp.category : "SEMUA";
+  const mutation = sp.mutation === "DEBIT" || sp.mutation === "KREDIT" ? sp.mutation : "SEMUA";
+
+  const fromDate = new Date(`${from}T00:00:00.000Z`);
+  const toDate = new Date(`${to}T23:59:59.999Z`);
+
+  const where = {
+    createdAt: { gte: fromDate, lte: toDate },
+    ...(category !== "SEMUA" ? { category } : {}),
+    ...(mutation !== "SEMUA" ? { mutation } : {}),
+  };
+
   const [transactions, masuk, keluar, balance] = await Promise.all([
     prisma.transaction.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       take: 300,
     }),
@@ -31,6 +62,40 @@ export default async function AdminTransaksiPage() {
         subtitle="Seluruh transaksi pemasukan & pengeluaran cluster"
         action={<AddTransaksiForm />}
       />
+
+      <form method="GET" className="card mb-4 space-y-3 p-4 print:hidden">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Mulai Transaksi</label>
+            <input type="date" name="from" defaultValue={from} className="input" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Akhir Transaksi</label>
+            <input type="date" name="to" defaultValue={to} className="input" />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Kategori</label>
+            <select name="category" defaultValue={category} className="input">
+              <option value="SEMUA">SEMUA</option>
+              <option value="UTAMA">UTAMA</option>
+              <option value="PKK">PKK</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Mutasi</label>
+            <select name="mutation" defaultValue={mutation} className="input">
+              <option value="SEMUA">SEMUA</option>
+              <option value="DEBIT">DEBIT</option>
+              <option value="KREDIT">KREDIT</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" className="w-full rounded-lg bg-[#726d70] px-4 py-2 text-sm font-semibold text-white">
+          FILTER
+        </button>
+      </form>
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card p-4">
@@ -72,6 +137,8 @@ export default async function AdminTransaksiPage() {
       </div>
 
       <AdminTransaksiTable
+        title="Daftar Transaksi"
+        subtitle={`Periode ${from} s.d. ${to}`}
         transactions={transactions.map((t) => ({
           id: t.id,
           category: t.category,

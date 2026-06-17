@@ -24,16 +24,23 @@ export function WargaManager({ houses }: { houses: House[] }) {
   const [editing, setEditing] = useState<House | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"ALL" | "OWNER" | "RENTER" | "EMPTY">("ALL");
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return houses.filter(
-      (h) =>
+    return houses.filter((h) => {
+      const matchQuery =
         (h.ownerName ?? "").toLowerCase().includes(q) ||
         `${h.block}${h.no}`.toLowerCase().includes(q) ||
-        `${h.block} ${h.no}`.toLowerCase().includes(q)
-    );
-  }, [houses, query]);
+        `${h.block} ${h.no}`.toLowerCase().includes(q);
+
+      if (!matchQuery) return false;
+      if (status === "ALL") return true;
+      if (status === "OWNER") return h.occupied && h.occupiedByOwner;
+      if (status === "RENTER") return h.occupied && !h.occupiedByOwner;
+      return !h.occupied;
+    });
+  }, [houses, query, status]);
 
   function statusLabel(h: House) {
     if (!h.occupied) return "Kosong";
@@ -53,6 +60,23 @@ export function WargaManager({ houses }: { houses: House[] }) {
             placeholder="Cari nama, blok, nomor..."
             className="input pl-11"
           />
+        </div>
+        <div className="min-w-[220px]">
+          <select
+            value={status}
+            onChange={(e) =>
+              setStatus(
+                (e.target.value as "ALL" | "OWNER" | "RENTER" | "EMPTY")
+              )
+            }
+            className="input"
+            aria-label="Filter status hunian"
+          >
+            <option value="ALL">Semua Data</option>
+            <option value="OWNER">Ditempati Pemilik</option>
+            <option value="RENTER">Ditempati Pengontrak</option>
+            <option value="EMPTY">Kosong</option>
+          </select>
         </div>
         <button
           onClick={() => {

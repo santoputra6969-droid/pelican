@@ -11,12 +11,11 @@ export default async function AdminTunggakanPkkPage({
 }) {
   const sp = await searchParams;
   const selectedBlock = sp.block && sp.block !== "SEMUA" ? sp.block : "SEMUA";
-  const selectedYear = new Date().getFullYear();
 
   const { rows, blocks, totalPiutang } = await getCommunityFeeRows({
     feeType: "PKK",
     selectedBlock,
-    selectedYear,
+    includeAllYears: true,
   });
 
   return (
@@ -24,7 +23,7 @@ export default async function AdminTunggakanPkkPage({
       <div className="print:hidden">
         <AdminPageHeader
           title="Tunggakan PKK"
-          subtitle={`Daftar rumah menunggak iuran PKK tahun ${selectedYear}`}
+          subtitle="Daftar rumah menunggak iuran PKK 1 bulan atau lebih"
         />
       </div>
       <TunggakanReport
