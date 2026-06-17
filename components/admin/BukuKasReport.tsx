@@ -182,7 +182,7 @@ export function BukuKasReport({
       </div>
 
       {/* Ringkasan */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4 print-summary-grid">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 print-summary-grid">
         <Summary label="Saldo Awal" value={saldoAwal} tone="ink" />
         <Summary label="Pemasukan" value={totalMasuk} tone="green" />
         <Summary label="Pengeluaran" value={totalKeluar} tone="red" />

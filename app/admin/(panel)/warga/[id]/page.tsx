@@ -30,7 +30,7 @@ export default async function AdminWargaDetailPage({
       : "Ditempati Pengontrak";
 
   return (
-    <div className="px-5 py-6 lg:px-8">
+    <div className="px-4 py-5 sm:px-5 sm:py-6 lg:px-8">
       <Link
         href="/admin/warga"
         className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-ink-soft transition hover:text-pelican-700"

@@ -32,13 +32,13 @@ export function InformasiManager({ items }: { items: Info[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-start sm:justify-end">
         <button
           onClick={() => {
             setEditing(null);
             setOpen(true);
           }}
-          className="btn-primary"
+          className="btn-primary w-full sm:w-auto"
         >
           <Icon name="plus" size={18} />
           Tambah Informasi
@@ -50,7 +50,7 @@ export function InformasiManager({ items }: { items: Info[] }) {
           Belum ada informasi.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {items.map((info) => (
             <article key={info.id} className="card p-5">
               <div className="flex items-center gap-2">
@@ -68,13 +68,13 @@ export function InformasiManager({ items }: { items: Info[] }) {
               <p className="mt-1 line-clamp-3 text-sm text-ink-soft">
                 {stripHtml(info.content)}
               </p>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button
                   onClick={() => {
                     setEditing(info);
                     setOpen(true);
                   }}
-                  className="btn-ghost flex-1 py-2.5 text-xs"
+                  className="btn-ghost w-full py-2.5 text-xs sm:flex-1"
                 >
                   <Icon name="user-edit" size={16} />
                   Edit
@@ -83,7 +83,7 @@ export function InformasiManager({ items }: { items: Info[] }) {
                   <input type="hidden" name="id" value={info.id} />
                   <button
                     type="submit"
-                    className="flex h-full items-center gap-1.5 rounded-2xl border border-red-100 bg-white px-4 py-2.5 text-xs font-semibold text-red-500 transition active:scale-95"
+                    className="flex h-full w-full items-center justify-center gap-1.5 rounded-2xl border border-red-100 bg-white px-4 py-2.5 text-xs font-semibold text-red-500 transition active:scale-95 sm:w-auto"
                   >
                     <Icon name="plus" size={16} className="rotate-45" />
                     Hapus

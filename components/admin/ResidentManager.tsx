@@ -43,9 +43,9 @@ export function ResidentManager({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-base font-bold text-ink">Data Pemilik & Penghuni</h2>
-        <button onClick={openAdd} className="btn-primary">
+        <button onClick={openAdd} className="btn-primary w-full sm:w-auto">
           <Icon name="plus" size={18} />
           Tambah Data
         </button>
@@ -96,7 +96,7 @@ export function ResidentManager({
           <input type="hidden" name="id" value={editing?.id ?? ""} />
           <input type="hidden" name="houseId" value={houseId} />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Status
@@ -135,7 +135,7 @@ export function ResidentManager({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 No. Handphone
@@ -160,7 +160,7 @@ export function ResidentManager({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
                 Foto / Scan KTP

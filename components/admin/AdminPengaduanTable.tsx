@@ -66,7 +66,7 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
             </button>
           ))}
         </div>
-        <div className="relative max-w-xs">
+        <div className="relative w-full max-w-xs">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint">
             <Icon name="search" size={18} />
           </span>
@@ -115,7 +115,7 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
                 className="mt-3 space-y-2 border-t border-black/5 pt-3"
               >
                 <input type="hidden" name="id" value={c.id} />
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className="text-[11px] font-semibold text-ink-soft">
                     Status
                   </label>
@@ -136,7 +136,7 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
                   placeholder="Tulis tanggapan untuk warga (opsional)..."
                   className="input resize-none text-sm"
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <button type="submit" className="btn-primary flex-1 py-2 text-sm">
                     <Icon name="check" size={16} />
                     Simpan

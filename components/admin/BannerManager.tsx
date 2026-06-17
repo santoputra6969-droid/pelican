@@ -30,8 +30,8 @@ export function BannerManager({ items }: { items: Banner[] }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <button onClick={openNew} className="btn-primary">
+      <div className="mb-4 flex justify-start sm:justify-end">
+        <button onClick={openNew} className="btn-primary w-full sm:w-auto">
           <Icon name="plus" size={18} />
           Tambah Banner
         </button>
@@ -42,7 +42,7 @@ export function BannerManager({ items }: { items: Banner[] }) {
           Belum ada banner.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {items.map((b) => (
             <div key={b.id} className="card overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -59,9 +59,9 @@ export function BannerManager({ items }: { items: Banner[] }) {
                 )}
                 <div className="ml-auto flex gap-2">
                   <button
-                    onClick={() => openEdit(b)}
-                    className="btn-ghost px-3 py-2 text-xs"
-                  >
+                      onClick={() => openEdit(b)}
+                      className="btn-ghost w-full px-3 py-2 text-xs sm:w-auto"
+                    >
                     <Icon name="user-edit" size={16} />
                     Edit
                   </button>
@@ -69,7 +69,7 @@ export function BannerManager({ items }: { items: Banner[] }) {
                     <input type="hidden" name="id" value={b.id} />
                     <button
                       type="submit"
-                      className="flex items-center gap-1.5 rounded-2xl border border-red-100 px-3 py-2 text-xs font-semibold text-red-500"
+                      className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-red-100 px-3 py-2 text-xs font-semibold text-red-500 sm:w-auto"
                     >
                       <Icon name="plus" size={16} className="rotate-45" />
                       Hapus

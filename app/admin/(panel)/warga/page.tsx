@@ -13,7 +13,7 @@ export default async function AdminWargaPage() {
   });
 
   return (
-    <div className="px-5 py-6 lg:px-8">
+    <div className="px-4 py-5 sm:px-5 sm:py-6 lg:px-8">
       <AdminPageHeader
         title="Data Warga"
         subtitle="Kelola data hunian & pemilik rumah"

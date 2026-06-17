@@ -45,8 +45,8 @@ export function KontribusiManager({
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <button onClick={openAdd} className="btn-primary">
+      <div className="mb-4 flex justify-start sm:justify-end">
+        <button onClick={openAdd} className="btn-primary w-full sm:w-auto">
           <Icon name="plus" size={18} />
           Tambah Kontribusi
         </button>
@@ -64,7 +64,7 @@ export function KontribusiManager({
               : null;
             return (
               <div key={c.id} className="card p-5">
-                <div className="flex items-start gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span
@@ -82,7 +82,7 @@ export function KontribusiManager({
                       <p className="text-xs text-ink-soft">{c.description}</p>
                     )}
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 self-end sm:self-auto">
                     <button
                       onClick={() => {
                         setEditing(c);
@@ -127,7 +127,7 @@ export function KontribusiManager({
                   )}
                 </div>
 
-                <button
+                  <button
                   onClick={() => setEntryFor(c)}
                   className="btn-ghost mt-3 w-full !py-2.5 text-xs"
                 >

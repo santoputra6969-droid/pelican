@@ -42,7 +42,7 @@ export function AddTransaksiForm() {
             <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
               Jenis
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setKind("KELUAR")}
@@ -73,7 +73,7 @@ export function AddTransaksiForm() {
             <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
               Kas
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setCategory("UTAMA")}
