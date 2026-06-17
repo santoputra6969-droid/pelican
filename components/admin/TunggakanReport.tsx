@@ -42,7 +42,15 @@ export function TunggakanReport({
     [rows, selectedIds]
   );
   const selectedTotal = selectedRows.reduce((s, r) => s + r.total, 0);
+  const totalNett = Math.round(selectedTotal * 0.993);
   const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+  const printedAt = new Date().toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   function toggleRow(id: number) {
     setSelectedIds((prev) =>
@@ -117,6 +125,51 @@ export function TunggakanReport({
         </div>
       </div>
 
+      <div className="hidden print:block">
+        <p className="text-center text-lg font-bold text-black">
+          Tunggakan IPL Cluster Puri Pelican Blok {selectedBlock === "SEMUA" ? "Semua" : selectedBlock}
+        </p>
+        <p className="mb-3 text-center text-xs text-black">Dicetak pada {printedAt} WIB</p>
+
+        <table className="w-full border-collapse text-left text-[11px] text-black">
+          <thead>
+            <tr className="bg-yellow-300">
+              <th className="border border-black px-2 py-1 text-center">No</th>
+              <th className="border border-black px-2 py-1">Blok &amp; No</th>
+              <th className="border border-black px-2 py-1">Nama Penghuni</th>
+              <th className="border border-black px-2 py-1">Tunggakan</th>
+              <th className="border border-black px-2 py-1 text-right">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedRows.map((r, index) => (
+              <tr key={`print-row-${r.id}`}>
+                <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
+                <td className="border border-black px-2 py-1">{r.block} No {r.no}</td>
+                <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
+                <td className="border border-black px-2 py-1">{r.months} bulan</td>
+                <td className="border border-black px-2 py-1 text-right">{formatRupiah(r.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-black/10 font-bold">
+              <td className="border border-black px-2 py-1" colSpan={3}>
+                TOTAL
+              </td>
+              <td className="border border-black px-2 py-1">{selectedRows.reduce((acc, r) => acc + r.months, 0)} bulan</td>
+              <td className="border border-black px-2 py-1 text-right">{formatRupiah(selectedTotal)}</td>
+            </tr>
+            <tr className="bg-green-300 font-bold">
+              <td className="border border-black px-2 py-1" colSpan={4}>
+                TOTAL NETT (-0.7%)
+              </td>
+              <td className="border border-black px-2 py-1 text-right">{formatRupiah(totalNett)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
       {/* Filter & aksi */}
       <div className="card mb-4 space-y-4 p-4 print:hidden">
         <div className="max-w-sm">
@@ -169,14 +222,14 @@ export function TunggakanReport({
       </div>
 
       {/* Ringkasan */}
-      <div className="mb-6 grid grid-cols-2 gap-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Rumah Menunggak</p>
           <p className="mt-1 text-2xl font-extrabold text-ink">{selectedRows.length}</p>
         </div>
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Total Piutang</p>
-          <p className="mt-1 text-[1.55rem] font-extrabold leading-tight text-red-500 sm:text-2xl">
+          <p className="mt-1 whitespace-nowrap text-xl font-extrabold leading-tight tracking-tight text-red-500 sm:text-2xl">
             {formatRupiah(selectedTotal)}
           </p>
         </div>
@@ -193,7 +246,7 @@ export function TunggakanReport({
         {formatRupiah(selectedTotal)} total piutang yang dimiliki.
       </p>
 
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 print:hidden md:hidden">
         {selectedRows.map((r) => (
           <div
             key={`mobile-${r.id}`}
@@ -327,40 +380,7 @@ export function TunggakanReport({
         </div>
       )}
 
-      <div className="hidden print:block">
-        <table className="w-full border-collapse text-left text-[11px] text-black">
-          <thead>
-            <tr>
-              <th className="border border-black px-2 py-1 text-center">No</th>
-              <th className="border border-black px-2 py-1">Nama Penghuni</th>
-              <th className="border border-black px-2 py-1">Tunggakan</th>
-              <th className="border border-black px-2 py-1 text-right">Nominal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {selectedRows.map((r, index) => (
-              <tr key={`print-row-${r.id}`}>
-                <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
-                <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
-                <td className="border border-black px-2 py-1">{r.months} bulan</td>
-                <td className="border border-black px-2 py-1 text-right">{formatRupiah(r.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td className="border border-black px-2 py-1 font-bold" colSpan={3}>
-                TOTAL
-              </td>
-              <td className="border border-black px-2 py-1 text-right font-bold">
-                {formatRupiah(selectedTotal)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      <div className="print-signatures print-only">
+      <div className="print-signatures hidden print-only">
         <div className="print-signatures__item">
           <p>Dibuat oleh,</p>
           <div />
