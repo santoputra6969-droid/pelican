@@ -218,6 +218,17 @@ body {
     overflow: visible !important;
   }
 
+  /* Ensure desktop print tables remain visible across Android browsers. */
+  .hidden.md\:block,
+  .md\:block.hidden {
+    display: block !important;
+  }
+
+  /* Keep mobile-only blocks hidden in print. */
+  .md\:hidden {
+    display: none !important;
+  }
+
   .print-tunggakan-table {
     page-break-inside: auto;
     width: 100% !important;
@@ -282,56 +293,53 @@ body {
   }
 }
 
-/* Fine-tuning khusus iOS Safari saat export/save PDF */
-@supports (-webkit-touch-callout: none) {
-  @media print {
-    @page {
-      size: A4;
-      margin: 5mm;
-    }
+/* Fine-tuning khusus iOS Safari saat export/save PDF.
+   Aktif hanya bila html punya class .ios-safari-print agar Android tidak ikut kena. */
+@media print {
+  html.ios-safari-print {
+    -webkit-text-size-adjust: 100% !important;
+  }
 
-    html,
-    body {
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      -webkit-text-size-adjust: 100% !important;
-    }
+  html.ios-safari-print,
+  html.ios-safari-print body {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 
-    main,
-    .app-shell {
-      width: 100% !important;
-      max-width: none !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
+  html.ios-safari-print main,
+  html.ios-safari-print .app-shell {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 
-    .print-report {
-      margin-bottom: 6px !important;
-    }
+  html.ios-safari-print .print-report {
+    margin-bottom: 6px !important;
+  }
 
-    .print-report__header {
-      padding-bottom: 6px !important;
-      margin-bottom: 6px !important;
-    }
+  html.ios-safari-print .print-report__header {
+    padding-bottom: 6px !important;
+    margin-bottom: 6px !important;
+  }
 
-    .print-kop-image {
-      width: 100% !important;
-      max-width: 100% !important;
-      height: auto !important;
-    }
+  html.ios-safari-print .print-kop-image {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
 
-    .print-tunggakan-table {
-      width: 100% !important;
-      table-layout: fixed;
-    }
+  html.ios-safari-print .print-tunggakan-table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
 
-    .print-tunggakan-table th,
-    .print-tunggakan-table td {
-      font-size: 10px !important;
-      line-height: 1.25 !important;
-      padding: 2px 3px !important;
-      word-break: break-word;
-    }
+  html.ios-safari-print .print-tunggakan-table th,
+  html.ios-safari-print .print-tunggakan-table td {
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    padding: 2px 3px !important;
+    word-break: break-word;
   }
 }

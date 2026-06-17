@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { formatDateTime, formatRupiah } from "@/lib/format";
+import { printWithIOSClass } from "@/lib/printUtils";
 
 type Row = {
   id: number;
@@ -61,9 +62,7 @@ export function AdminTransaksiTable({
   }
 
   function printPdf() {
-    if (typeof window === "undefined") return;
-    window.scrollTo(0, 0);
-    window.requestAnimationFrame(() => window.print());
+    printWithIOSClass();
   }
 
   return (

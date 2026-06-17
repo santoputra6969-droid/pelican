@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { MONTHS, formatPeriod, formatRupiah, formatDateTime } from "@/lib/format";
+import { printWithIOSClass } from "@/lib/printUtils";
 
 type Row = {
   id: number;
@@ -41,6 +42,10 @@ export function BukuKasReport({
   const [kopOk, setKopOk] = useState(true);
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
+
+  function printPdf() {
+    printWithIOSClass();
+  }
 
   function apply(next: Partial<{ year: number; month: number; category: string }>) {
     const params = new URLSearchParams({
@@ -130,7 +135,7 @@ export function BukuKasReport({
             <Icon name="receipt" size={18} />
             Excel
           </button>
-          <button onClick={() => window.print()} className="btn-ghost">
+          <button onClick={printPdf} className="btn-ghost">
             <Icon name="receipt" size={18} />
             PDF
           </button>

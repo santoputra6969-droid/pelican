@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { formatPeriod, formatRupiah } from "@/lib/format";
+import { isIOSSafari } from "@/lib/printUtils";
 
 type Row = {
   id: number;
@@ -97,15 +98,6 @@ export function TunggakanReport({
     a.download = `${reportLabel.toLowerCase().replace(/\s+/g, "-")}-${selectedBlock.toLowerCase()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  function isIOSSafari() {
-    if (typeof window === "undefined") return false;
-    const ua = window.navigator.userAgent;
-    const isiOS = /iP(hone|ad|od)/.test(ua);
-    const isWebKit = /WebKit/.test(ua);
-    const isOtherIOSBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
-    return isiOS && isWebKit && !isOtherIOSBrowser;
   }
 
   function escapeHtml(value: string) {
@@ -278,8 +270,7 @@ export function TunggakanReport({
       printViaTemplate();
       return;
     }
-    window.scrollTo(0, 0);
-    window.requestAnimationFrame(() => window.print());
+    window.print();
   }
 
   return (
