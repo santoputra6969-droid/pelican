@@ -288,7 +288,7 @@ export type ResidentFormResult =
   | null;
 
 type ResidentMemberInput = {
-  relation: "ANAK" | "KERABAT";
+  relation: "ANAK" | "KERABAT" | "SUAMI" | "ISTRI";
   name: string;
 };
 
@@ -387,7 +387,14 @@ export async function submitResidentForm(
         }))
         .filter((m) => m.name.length > 0)
         .map((m) => ({
-          relation: m.relation === "KERABAT" ? "KERABAT" : "ANAK",
+          relation:
+            m.relation === "KERABAT"
+              ? "KERABAT"
+              : m.relation === "SUAMI"
+                ? "SUAMI"
+                : m.relation === "ISTRI"
+                  ? "ISTRI"
+                  : "ANAK",
           name: m.name,
         }))
     : [];

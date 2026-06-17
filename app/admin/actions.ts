@@ -324,7 +324,7 @@ export async function saveHouse(formData: FormData): Promise<ActionResult> {
   const ownerName = String(formData.get("ownerName") ?? "").trim() || null;
   const occupied = formData.get("occupied") === "on";
   const occupiedByOwner = formData.get("occupiedByOwner") === "on";
-  const payIpl = formData.get("payIpl") === "on";
+  const payIpl = true;
   const iplAmount = Number(formData.get("iplAmount") ?? 252000);
   if (!block || !no)
     return { ok: false, message: "Blok & nomor rumah wajib diisi." };
@@ -491,8 +491,16 @@ export async function saveResidentPengkinian(formData: FormData): Promise<Action
         .filter((m) => m.name.length > 0)
     : [];
 
-  if (members.some((m) => m.relation !== "ANAK" && m.relation !== "KERABAT")) {
-    return { ok: false, message: "Relasi anggota hanya boleh Anak atau Kerabat." };
+  if (
+    members.some(
+      (m) =>
+        m.relation !== "ANAK" &&
+        m.relation !== "KERABAT" &&
+        m.relation !== "SUAMI" &&
+        m.relation !== "ISTRI"
+    )
+  ) {
+    return { ok: false, message: "Relasi anggota hanya boleh Anak, Kerabat, Suami, atau Istri." };
   }
   if (members.length > 30) {
     return { ok: false, message: "Maksimal 30 anggota rumah per pengkinian." };

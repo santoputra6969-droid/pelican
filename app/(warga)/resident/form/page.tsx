@@ -10,7 +10,10 @@ export const dynamic = "force-dynamic";
 function parseRelation(note: string | null) {
   if (!note) return "ANAK" as const;
   const match = note.match(/RELASI:([A-Z_]+)/);
-  return match?.[1] === "KERABAT" ? ("KERABAT" as const) : ("ANAK" as const);
+  if (match?.[1] === "KERABAT") return "KERABAT" as const;
+  if (match?.[1] === "SUAMI") return "SUAMI" as const;
+  if (match?.[1] === "ISTRI") return "ISTRI" as const;
+  return "ANAK" as const;
 }
 
 function parseReligion(note: string | null) {

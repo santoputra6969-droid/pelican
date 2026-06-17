@@ -11,7 +11,7 @@ type HouseOption = {
 };
 
 type MemberRow = {
-  relation: "ANAK" | "KERABAT";
+  relation: "ANAK" | "KERABAT" | "SUAMI" | "ISTRI";
   name: string;
 };
 
@@ -227,9 +227,17 @@ export function ResidentForm({
                   value={m.relation}
                   onChange={(e) => {
                     const next = [...members];
+                    const relation =
+                      e.target.value === "KERABAT"
+                        ? "KERABAT"
+                        : e.target.value === "SUAMI"
+                          ? "SUAMI"
+                          : e.target.value === "ISTRI"
+                            ? "ISTRI"
+                            : "ANAK";
                     next[idx] = {
                       ...next[idx],
-                      relation: e.target.value === "KERABAT" ? "KERABAT" : "ANAK",
+                      relation,
                     };
                     setMembers(next);
                   }}
@@ -237,6 +245,8 @@ export function ResidentForm({
                 >
                   <option value="ANAK">Anak</option>
                   <option value="KERABAT">Kerabat</option>
+                  <option value="SUAMI">Suami</option>
+                  <option value="ISTRI">Istri</option>
                 </select>
                 <input
                   value={m.name}

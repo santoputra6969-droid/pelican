@@ -88,7 +88,7 @@ export function WargaManager({ houses }: { houses: House[] }) {
           <Icon name="plus" size={18} />
           Tambah Rumah
         </button>
-        <Link href="/admin/warga/pengkinian" className="btn-ghost hidden w-full sm:inline-flex sm:w-auto">
+        <Link href="/admin/warga/pengkinian" className="btn-ghost w-full sm:w-auto">
           <Icon name="user-edit" size={17} />
           Pengkinian Data
         </Link>
@@ -227,14 +227,6 @@ export function WargaManager({ houses }: { houses: House[] }) {
         ))}
       </div>
 
-      <Link
-        href="/admin/warga/pengkinian"
-        className="fixed bottom-4 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#6f6668] px-5 py-3 text-sm font-semibold text-white shadow-lg md:hidden"
-      >
-        <Icon name="user-edit" size={16} />
-        PENGKINIAN DATA
-      </Link>
-
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -295,13 +287,9 @@ export function WargaManager({ houses }: { houses: House[] }) {
             />
           </div>
           <div className="space-y-2">
+            <input type="hidden" name="payIpl" value="on" />
             <label className="flex items-center gap-2 text-sm text-ink-soft">
-              <input
-                type="checkbox"
-                name="payIpl"
-                defaultChecked={editing?.payIpl ?? true}
-                className="h-4 w-4 accent-pelican-600"
-              />
+              <input type="checkbox" checked readOnly disabled className="h-4 w-4 accent-pelican-600" />
               Wajib bayar IPL
             </label>
             <label className="flex items-center gap-2 text-sm text-ink-soft">
