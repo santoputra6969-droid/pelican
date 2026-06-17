@@ -13,13 +13,25 @@ export const dynamic = "force-dynamic";
 export default async function ProfilPage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
+
+  const dueUnpaidWhere = {
+    houseId: house.id,
+    status: "UNPAID" as const,
+    OR: [
+      { year: { lt: nowYear } },
+      { year: nowYear, month: { lte: nowMonth } },
+    ],
+  };
 
   const [paidCount, unpaid] = await Promise.all([
     prisma.bill.count({
       where: { houseId: house.id, status: "PAID" },
     }),
     prisma.bill.aggregate({
-      where: { houseId: house.id, status: "UNPAID" },
+      where: dueUnpaidWhere,
       _sum: { amount: true },
       _count: true,
     }),
