@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { MONTHS, formatPeriod, formatRupiah, formatDateTime } from "@/lib/format";
@@ -36,6 +37,7 @@ export function BukuKasReport({
   const categoryLabel =
     category === "SEMUA" ? "Semua Kas" : category === "PKK" ? "Kas PKK" : "Kas Utama";
   const printedAt = new Date();
+  const [kopOk, setKopOk] = useState(true);
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
@@ -137,9 +139,20 @@ export function BukuKasReport({
       {/* Judul cetak */}
       <div className="print-report mb-4">
         <div className="print-report__header print-only">
-          <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
-          <p className="print-report__title">LAPORAN BUKU KAS</p>
-          <p className="print-report__subtitle">Periode {formatPeriod(year, month)}</p>
+          {kopOk ? (
+            <img
+              src="/kop-surat.png"
+              alt="Kop Surat Cluster Puri Pelican"
+              className="print-kop-image"
+              onError={() => setKopOk(false)}
+            />
+          ) : (
+            <>
+              <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
+              <p className="print-report__title">LAPORAN BUKU KAS</p>
+              <p className="print-report__subtitle">Periode {formatPeriod(year, month)}</p>
+            </>
+          )}
         </div>
 
         <div className="print-report__meta print-only">
