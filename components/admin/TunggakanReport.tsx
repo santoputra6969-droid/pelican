@@ -131,7 +131,7 @@ export function TunggakanReport({
         </p>
         <p className="mb-3 text-center text-xs text-black">Dicetak pada {printedAt} WIB</p>
 
-        <table className="w-full border-collapse text-left text-[11px] text-black">
+        <table className="print-tunggakan-table w-full border-collapse text-left text-[11px] text-black">
           <thead>
             <tr className="bg-yellow-300">
               <th className="border border-black px-2 py-1 text-center">No</th>
@@ -145,10 +145,10 @@ export function TunggakanReport({
             {selectedRows.map((r, index) => (
               <tr key={`print-row-${r.id}`}>
                 <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
-                <td className="border border-black px-2 py-1">{r.block} No {r.no}</td>
+                <td className="border border-black px-2 py-1 whitespace-nowrap">{r.block} No {r.no}</td>
                 <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
-                <td className="border border-black px-2 py-1">{r.months} bulan</td>
-                <td className="border border-black px-2 py-1 text-right">{formatRupiah(r.total)}</td>
+                <td className="border border-black px-2 py-1 whitespace-nowrap">{r.months} bulan</td>
+                <td className="border border-black px-2 py-1 text-right whitespace-nowrap">{formatRupiah(r.total)}</td>
               </tr>
             ))}
           </tbody>

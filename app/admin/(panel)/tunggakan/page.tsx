@@ -54,7 +54,7 @@ export default async function AdminTunggakanPage({
   }));
 
   return (
-    <div className="px-5 py-6 lg:px-8">
+    <div className="px-5 py-6 print:px-0 print:py-0 lg:px-8">
       <div className="print:hidden">
         <AdminPageHeader
           title="Tunggakan IPL"

@@ -87,12 +87,24 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 14mm;
+    margin: 8mm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body {
     background: #fff !important;
     color: #000 !important;
+  }
+
+  .app-shell {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
   }
 
   .print-only {
@@ -204,6 +216,23 @@ body {
   .print-table-wrap {
     page-break-inside: auto;
     overflow: visible !important;
+  }
+
+  .print-tunggakan-table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  .print-tunggakan-table thead {
+    display: table-header-group;
+  }
+
+  .print-tunggakan-table tfoot {
+    display: table-row-group;
+  }
+
+  .print-tunggakan-table tr {
+    page-break-inside: avoid;
   }
 
   .print-table thead {
