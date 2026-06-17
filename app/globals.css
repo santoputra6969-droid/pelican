@@ -281,3 +281,57 @@ body {
     height: 22mm;
   }
 }
+
+/* Fine-tuning khusus iOS Safari saat export/save PDF */
+@supports (-webkit-touch-callout: none) {
+  @media print {
+    @page {
+      size: A4;
+      margin: 5mm;
+    }
+
+    html,
+    body {
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+
+    main,
+    .app-shell {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .print-report {
+      margin-bottom: 6px !important;
+    }
+
+    .print-report__header {
+      padding-bottom: 6px !important;
+      margin-bottom: 6px !important;
+    }
+
+    .print-kop-image {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    .print-tunggakan-table {
+      width: 100% !important;
+      table-layout: fixed;
+    }
+
+    .print-tunggakan-table th,
+    .print-tunggakan-table td {
+      font-size: 10px !important;
+      line-height: 1.25 !important;
+      padding: 2px 3px !important;
+      word-break: break-word;
+    }
+  }
+}
