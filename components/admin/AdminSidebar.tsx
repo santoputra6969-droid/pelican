@@ -31,7 +31,10 @@ export function AdminSidebar({ adminName }: { adminName: string }) {
         dashboardOnly ? "hidden lg:flex" : "flex"
       }`}
     >
-      <div className="flex items-center gap-2 px-5 py-5 text-lg font-extrabold text-pelican-700">
+      <Link
+        href="/admin"
+        className="flex items-center gap-2 px-5 py-5 text-lg font-extrabold text-pelican-700 transition hover:bg-pelican-50/60"
+      >
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-600 text-white">
           P
         </span>
@@ -39,7 +42,7 @@ export function AdminSidebar({ adminName }: { adminName: string }) {
         <span className="ml-1 rounded-full bg-pelican-50 px-2 py-0.5 text-[10px] font-bold text-pelican-600">
           Admin
         </span>
-      </div>
+      </Link>
 
       <nav className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-3 lg:pb-0">
         {nav.map((item) => {

@@ -11,15 +11,26 @@ export default async function AdminTunggakanPage({
 }) {
   const sp = await searchParams;
   const block = sp.block && sp.block !== "SEMUA" ? sp.block : null;
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
+
+  const dueUnpaidWhere = {
+    status: "UNPAID" as const,
+    OR: [
+      { year: { lt: nowYear } },
+      { year: nowYear, month: { lte: nowMonth } },
+    ],
+  };
 
   const houses = await prisma.house.findMany({
     where: {
       ...(block ? { block } : {}),
-      bills: { some: { status: "UNPAID" } },
+      bills: { some: dueUnpaidWhere },
     },
     include: {
       bills: {
-        where: { status: "UNPAID" },
+        where: dueUnpaidWhere,
         orderBy: [{ year: "asc" }, { month: "asc" }],
       },
     },

@@ -32,21 +32,21 @@ declare global {
 export function BayarIpl({
   bills,
   paidBills = [],
-  advanceOffer,
+  futureBills = [],
 }: {
   bills: BillLite[];
   paidBills?: BillLite[];
-  advanceOffer?: { year: number; months: number[]; amountPerMonth: number };
+  futureBills?: { year: number; month: number; amount: number }[];
 }) {
   const [tab, setTab] = useState<"aktif" | "terbayar">("aktif");
   const [selectedIds, setSelectedIds] = useState<number[]>(
     bills[0] ? [bills[0].id] : []
   );
+  const [selectedFutureMonths, setSelectedFutureMonths] = useState<number[]>([]);
   const [state, formAction] = useActionState<CreatePaymentResult, FormData>(
     createPayment,
     null
   );
-  const [includeAdvance, setIncludeAdvance] = useState(false);
 
   // Saat token Snap siap, buka popup pembayaran Midtrans.
   useEffect(() => {
@@ -69,6 +69,8 @@ export function BayarIpl({
   }, [state]);
 
   const selectedBills = bills.filter((b) => selectedIds.includes(b.id));
+  const selectedFuture = futureBills.filter((b) => selectedFutureMonths.includes(b.month));
+  const activeCount = bills.length + futureBills.length;
 
   return (
     <>
@@ -81,7 +83,7 @@ export function BayarIpl({
               tab === "aktif" ? "bg-white text-pelican-700 shadow-sm" : "text-ink-soft"
             }`}
           >
-            Tagihan Aktif ({bills.length})
+            Tagihan Aktif ({activeCount})
           </button>
           <button
             onClick={() => setTab("terbayar")}
@@ -126,7 +128,7 @@ export function BayarIpl({
             </div>
           )}
         </section>
-      ) : bills.length === 0 ? (
+      ) : activeCount === 0 ? (
         <section className="mt-5 px-5">
           <div className="card flex flex-col items-center gap-3 p-10 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pelican-100 text-pelican-600">
@@ -141,14 +143,15 @@ export function BayarIpl({
       ) : (
         <ActiveBills
           bills={bills}
+          futureBills={futureBills}
           selectedIds={selectedIds}
           setSelectedIds={setSelectedIds}
+          selectedFutureMonths={selectedFutureMonths}
+          setSelectedFutureMonths={setSelectedFutureMonths}
           selectedBills={selectedBills}
+          selectedFuture={selectedFuture}
           formAction={formAction}
           state={state}
-          advanceOffer={advanceOffer}
-          includeAdvance={includeAdvance}
-          setIncludeAdvance={setIncludeAdvance}
         />
       )}
     </>
@@ -157,33 +160,34 @@ export function BayarIpl({
 
 function ActiveBills({
   bills,
+  futureBills,
   selectedIds,
   setSelectedIds,
+  selectedFutureMonths,
+  setSelectedFutureMonths,
   selectedBills,
+  selectedFuture,
   formAction,
   state,
-  advanceOffer,
-  includeAdvance,
-  setIncludeAdvance,
 }: {
   bills: BillLite[];
+  futureBills: { year: number; month: number; amount: number }[];
   selectedIds: number[];
   setSelectedIds: (ids: number[]) => void;
+  selectedFutureMonths: number[];
+  setSelectedFutureMonths: (months: number[]) => void;
   selectedBills: BillLite[];
+  selectedFuture: { year: number; month: number; amount: number }[];
   formAction: (formData: FormData) => void;
   state: CreatePaymentResult;
-  advanceOffer?: { year: number; months: number[]; amountPerMonth: number };
-  includeAdvance: boolean;
-  setIncludeAdvance: (v: boolean) => void;
 }) {
   const baseTotal = selectedBills.reduce((sum, b) => sum + b.amount, 0);
-  const advanceCount = advanceOffer?.months.length ?? 0;
-  const advanceTotal =
-    includeAdvance && advanceOffer
-      ? advanceOffer.amountPerMonth * advanceOffer.months.length
-      : 0;
-  const total = baseTotal + advanceTotal;
-  const allSelected = bills.length > 0 && selectedIds.length === bills.length;
+  const futureTotal = selectedFuture.reduce((sum, b) => sum + b.amount, 0);
+  const total = baseTotal + futureTotal;
+  const allSelected =
+    bills.length + futureBills.length > 0 &&
+    selectedIds.length === bills.length &&
+    selectedFutureMonths.length === futureBills.length;
 
   const toggleBill = (id: number) => {
     setSelectedIds(
@@ -194,7 +198,21 @@ function ActiveBills({
   };
 
   const toggleAll = () => {
-    setSelectedIds(allSelected ? [] : bills.map((b) => b.id));
+    if (allSelected) {
+      setSelectedIds([]);
+      setSelectedFutureMonths([]);
+      return;
+    }
+    setSelectedIds(bills.map((b) => b.id));
+    setSelectedFutureMonths(futureBills.map((b) => b.month));
+  };
+
+  const toggleFuture = (month: number) => {
+    setSelectedFutureMonths(
+      selectedFutureMonths.includes(month)
+        ? selectedFutureMonths.filter((m) => m !== month)
+        : [...selectedFutureMonths, month]
+    );
   };
 
   return (
@@ -259,6 +277,45 @@ function ActiveBills({
               </button>
             );
           })}
+
+          {futureBills.map((bill) => {
+            const active = selectedFutureMonths.includes(bill.month);
+            return (
+              <button
+                key={`future-${bill.year}-${bill.month}`}
+                type="button"
+                onClick={() => toggleFuture(bill.month)}
+                className={`card w-full p-4 text-left transition ${
+                  active ? "ring-2 ring-pelican-500" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-md border ${
+                        active
+                          ? "border-pelican-500 bg-pelican-500 text-white"
+                          : "border-black/15"
+                      }`}
+                    >
+                      {active && <Icon name="check" size={12} />}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-ink">
+                        IPL {formatPeriod(bill.year, bill.month)}
+                      </p>
+                      <p className="text-[11px] text-ink-faint">
+                        Iuran Pemeliharaan Lingkungan (Bukan Tunggakan)
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-extrabold text-ink">
+                    {formatRupiah(bill.amount)}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -266,7 +323,7 @@ function ActiveBills({
       <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-bold text-ink">Rincian Tagihan</h2>
         <div className="card p-5">
-          {selectedBills.length === 0 ? (
+          {selectedBills.length === 0 && selectedFuture.length === 0 ? (
             <p className="text-center text-sm text-ink-faint">
               Pilih tagihan yang ingin dibayar.
             </p>
@@ -285,12 +342,25 @@ function ActiveBills({
                   </span>
                 </div>
               ))}
+              {selectedFuture.map((bill) => (
+                <div
+                  key={`summary-future-${bill.year}-${bill.month}`}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="text-ink-soft">
+                    Iuran IPL {formatPeriod(bill.year, bill.month)} (Titipan)
+                  </span>
+                  <span className="font-semibold text-ink">
+                    {formatRupiah(bill.amount)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
           <div className="my-4 border-t border-dashed border-black/10" />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-ink-soft">
-              Total Bayar ({selectedBills.length} tagihan)
+              Total Bayar ({selectedBills.length + selectedFuture.length} tagihan)
             </span>
             <span className="text-xl font-extrabold text-pelican-700">
               {formatRupiah(total)}
@@ -301,33 +371,6 @@ function ActiveBills({
 
       {/* Metode */}
       <section className="mt-6 px-5">
-        {advanceOffer && advanceCount > 0 && (
-          <div className="card mb-3 p-4">
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={includeAdvance}
-                onChange={(e) => setIncludeAdvance(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-pelican-600"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold text-ink">
-                  Bayar full sampai Desember {advanceOffer.year}
-                </span>
-                <span className="mt-0.5 block text-xs text-ink-soft">
-                  Bulan {advanceOffer.months.map((m) => formatPeriod(advanceOffer.year, m)).join(", ")}
-                </span>
-                <span className="mt-1 block text-sm font-extrabold text-pelican-700">
-                  + {formatRupiah(advanceOffer.amountPerMonth * advanceOffer.months.length)}
-                </span>
-                <span className="mt-1 block text-[11px] text-ink-faint">
-                  Pembayaran ini tidak dimasukkan ke tunggakan. Akan dicatat sebagai titipan IPL.
-                </span>
-              </span>
-            </label>
-          </div>
-        )}
-
         <h2 className="mb-3 text-base font-bold text-ink">Metode Pembayaran</h2>
         <div className="card flex items-center gap-3 p-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-50 text-pelican-600">
@@ -343,13 +386,17 @@ function ActiveBills({
       {/* Pay bar */}
       <form action={formAction} className="sticky bottom-20 z-20 mb-8 mt-6 px-5">
         <input type="hidden" name="billIds" value={selectedIds.join(",")} />
-        {includeAdvance && advanceOffer && advanceCount > 0 && (
+        {selectedFuture.length > 0 && (
           <>
-            <input type="hidden" name="advanceYear" value={String(advanceOffer.year)} />
-            <input type="hidden" name="advanceMonths" value={advanceOffer.months.join(",")} />
+            <input type="hidden" name="advanceYear" value={String(selectedFuture[0].year)} />
+            <input
+              type="hidden"
+              name="advanceMonths"
+              value={selectedFuture.map((x) => x.month).join(",")}
+            />
           </>
         )}
-        <PayButton amount={total} disabled={selectedBills.length === 0 && !includeAdvance} />
+        <PayButton amount={total} disabled={selectedBills.length === 0 && selectedFuture.length === 0} />
         {state && !state.ok && (
           <p className="mt-2 text-center text-xs font-semibold text-red-500">
             {state.message}

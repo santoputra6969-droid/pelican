@@ -14,10 +14,19 @@ export default async function BayarIplPage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
   const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
 
   const [bills, paidBills] = await Promise.all([
     prisma.bill.findMany({
-      where: { houseId: house.id, status: "UNPAID" },
+      where: {
+        houseId: house.id,
+        status: "UNPAID",
+        OR: [
+          { year: { lt: nowYear } },
+          { year: nowYear, month: { lte: nowMonth } },
+        ],
+      },
       orderBy: [{ year: "asc" }, { month: "asc" }],
     }),
     prisma.bill.findMany({
@@ -27,15 +36,15 @@ export default async function BayarIplPage() {
   ]);
 
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
-  const existingThisYear = new Set(
-    [...bills, ...paidBills]
-      .filter((b) => b.year === now.getFullYear())
-      .map((b) => b.month)
+  const paidThisYear = new Set(
+    paidBills.filter((b) => b.year === nowYear).map((b) => b.month)
   );
-  const startMonth = now.getMonth() + 1;
-  const advanceMonths = Array.from({ length: 12 - startMonth + 1 }, (_, i) => startMonth + i).filter(
-    (m) => !existingThisYear.has(m)
-  );
+  const futureBills = Array.from(
+    { length: Math.max(0, 12 - nowMonth) },
+    (_, i) => nowMonth + i + 1
+  )
+    .filter((m) => !paidThisYear.has(m))
+    .map((month) => ({ year: nowYear, month, amount: house.iplAmount }));
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -70,11 +79,7 @@ export default async function BayarIplPage() {
           month: b.month,
           amount: b.amount,
         }))}
-        advanceOffer={{
-          year: now.getFullYear(),
-          months: advanceMonths,
-          amountPerMonth: house.iplAmount,
-        }}
+        futureBills={futureBills}
       />
 
       <Script
