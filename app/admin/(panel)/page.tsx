@@ -11,7 +11,7 @@ export default async function AdminDashboard() {
     icon: IconName;
   }[] = [
     { label: "Kelola Warga", href: "/admin/warga", icon: "user" },
-    { label: "Kelola Saldo", href: "/admin/transaksi", icon: "wallet" },
+    { label: "Kelola Saldo", href: "/admin/saldo", icon: "wallet" },
     { label: "Kelola Transaksi", href: "/admin/transaksi", icon: "receipt" },
     { label: "Buku Kas", href: "/admin/bukukas", icon: "apps" },
     { label: "Kelola Informasi", href: "/admin/informasi", icon: "help" },
@@ -23,12 +23,12 @@ export default async function AdminDashboard() {
     { label: "Kelola Kontribusi", href: "/admin/kontribusi", icon: "heart" },
     { label: "IPL Takeover", href: "/admin/ipl", icon: "swap" },
     { label: "Tunggakan IPL", href: "/admin/tunggakan", icon: "scan" },
-    { label: "Tunggakan Kas", href: "/admin/tunggakan", icon: "scan" },
-    { label: "Tunggakan PKK", href: "/admin/tunggakan", icon: "scan" },
-    { label: "Sistag IPL", href: "/admin/tunggakan", icon: "arrow-right" },
-    { label: "Sistag Kas", href: "/admin/tunggakan", icon: "arrow-right" },
-    { label: "Sistag PKK", href: "/admin/tunggakan", icon: "arrow-right" },
-    { label: "Pengaturan", href: "/admin/warga", icon: "shield" },
+    { label: "Tunggakan Kas", href: "/admin/tunggakan-kas", icon: "scan" },
+    { label: "Tunggakan PKK", href: "/admin/tunggakan-pkk", icon: "scan" },
+    { label: "Sistag IPL", href: "/admin/sistag-ipl", icon: "arrow-right" },
+    { label: "Sistag Kas", href: "/admin/sistag-kas", icon: "arrow-right" },
+    { label: "Sistag PKK", href: "/admin/sistag-pkk", icon: "arrow-right" },
+    { label: "Pengaturan", href: "/admin/pengaturan", icon: "shield" },
   ];
 
   return (

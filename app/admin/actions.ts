@@ -128,6 +128,48 @@ export async function generateBills(formData: FormData): Promise<ActionResult> {
   };
 }
 
+export async function setCommunityFeeConfig(
+  formData: FormData
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const feeType = String(formData.get("feeType") ?? "").toUpperCase();
+  const enabled = String(formData.get("enabled") ?? "on") === "on";
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+
+  if ((feeType !== "KAS" && feeType !== "PKK") || !Number.isFinite(amount) || amount < 0) {
+    return { ok: false, message: "Jenis iuran atau nominal tidak valid." };
+  }
+
+  if (feeType === "KAS") {
+    await prisma.house.updateMany({
+      data: {
+        payCash: enabled,
+        cashAmount: amount,
+      },
+    });
+  } else {
+    await prisma.house.updateMany({
+      data: {
+        payPkk: enabled,
+        pkkAmount: amount,
+      },
+    });
+  }
+
+  void admin;
+  revalidatePath("/admin/pengaturan");
+  revalidatePath("/admin/tunggakan-kas");
+  revalidatePath("/admin/tunggakan-pkk");
+  revalidatePath("/admin/sistag-kas");
+  revalidatePath("/admin/sistag-pkk");
+  revalidatePath("/admin/warga");
+
+  return {
+    ok: true,
+    message: `${feeType} diperbarui: ${enabled ? "aktif" : "nonaktif"}, nominal ${formatRupiah(amount)}.`,
+  };
+}
+
 /* ----------------------------- Transactions ----------------------------- */
 
 export async function createTransaction(formData: FormData): Promise<ActionResult> {

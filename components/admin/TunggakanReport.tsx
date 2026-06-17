@@ -20,11 +20,17 @@ export function TunggakanReport({
   blocks,
   selectedBlock,
   totalPiutang,
+  reportKind = "IPL",
+  reportLabel = "Tunggakan IPL",
+  filterBasePath = "/admin/tunggakan",
 }: {
   rows: Row[];
   blocks: string[];
   selectedBlock: string;
   totalPiutang: number;
+  reportKind?: "IPL" | "KAS" | "PKK";
+  reportLabel?: string;
+  filterBasePath?: string;
 }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<number[]>(rows.map((r) => r.id));
@@ -88,7 +94,7 @@ export function TunggakanReport({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `tunggakan-ipl-${selectedBlock.toLowerCase()}.csv`;
+    a.download = `${reportLabel.toLowerCase().replace(/\s+/g, "-")}-${selectedBlock.toLowerCase()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -221,7 +227,7 @@ export function TunggakanReport({
         <body>
           <div class="wrap">
             <img class="kop" src="${kopUrl}" alt="Kop Surat" />
-            <p class="title">Tunggakan IPL Cluster Puri Pelican Blok ${escapeHtml(titleBlock)}</p>
+            <p class="title">${escapeHtml(reportLabel)} Cluster Puri Pelican Blok ${escapeHtml(titleBlock)}</p>
             <p class="meta">Dicetak pada ${escapeHtml(printedAt)} WIB</p>
 
             <table>
@@ -296,7 +302,7 @@ export function TunggakanReport({
           ) : (
             <>
               <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
-              <p className="print-report__title">LAPORAN TUNGGAKAN IPL</p>
+              <p className="print-report__title">LAPORAN {reportLabel.toUpperCase()}</p>
             </>
           )}
         </div>
@@ -304,7 +310,7 @@ export function TunggakanReport({
 
       <div className="hidden print:block">
         <p className="text-center text-lg font-bold text-black">
-          Tunggakan IPL Cluster Puri Pelican Blok {selectedBlock === "SEMUA" ? "Semua" : selectedBlock}
+          {reportLabel} Cluster Puri Pelican Blok {selectedBlock === "SEMUA" ? "Semua" : selectedBlock}
         </p>
         <p className="mb-3 text-center text-xs text-black">Dicetak pada {printedAt} WIB</p>
 
@@ -355,7 +361,7 @@ export function TunggakanReport({
           </label>
           <select
             value={selectedBlock}
-            onChange={(e) => router.push(`/admin/tunggakan?block=${e.target.value}`)}
+            onChange={(e) => router.push(`${filterBasePath}?block=${e.target.value}`)}
             className="input"
           >
             <option value="SEMUA">Semua Blok</option>
@@ -413,11 +419,11 @@ export function TunggakanReport({
       </div>
 
       <h2 className="mb-3 text-lg font-bold text-ink">
-        Daftar Tunggakan{selectedBlock !== "SEMUA" ? ` — ${selectedBlock}` : ""}
+        Daftar {reportLabel}{selectedBlock !== "SEMUA" ? ` — ${selectedBlock}` : ""}
       </h2>
 
       <p className="mb-3 text-xs text-ink-soft print-only">
-        {selectedRows.length} unit rumah menunggak IPL 1 bulan atau lebih.
+        {selectedRows.length} unit rumah menunggak {reportKind} 1 bulan atau lebih.
       </p>
       <p className="mb-4 text-sm font-semibold text-ink print-only">
         {formatRupiah(selectedTotal)} total piutang yang dimiliki.
