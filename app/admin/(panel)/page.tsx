@@ -1,199 +1,86 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
-import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { prisma } from "@/lib/prisma";
-import { formatDateTime, formatRupiah } from "@/lib/format";
+import { adminLogout } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [
-    houseCount,
-    unpaid,
-    balance,
-    infoCount,
-    bannerCount,
-    newComplaints,
-    recentTx,
-  ] = await Promise.all([
-    prisma.house.count(),
-    prisma.bill.aggregate({
-      where: { status: "UNPAID" },
-      _sum: { amount: true },
-      _count: true,
-    }),
-    prisma.balance.findFirst({ orderBy: { id: "asc" } }),
-    prisma.information.count({ where: { published: true } }),
-    prisma.banner.count({ where: { active: true } }),
-    prisma.complaint.count({ where: { status: "BARU" } }),
-    prisma.transaction.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 6,
-    }),
-  ]);
-
-  const stats: {
+  const menus: {
     label: string;
-    value: string;
-    icon: IconName;
-    accent: string;
     href: string;
+    icon: IconName;
   }[] = [
-    {
-      label: "Total Rumah",
-      value: String(houseCount),
-      icon: "user",
-      accent: "#16bd7c",
-      href: "/admin/warga",
-    },
-    {
-      label: "Tagihan Belum Bayar",
-      value: formatRupiah(unpaid._sum.amount ?? 0),
-      icon: "home-pay",
-      accent: "#ef4444",
-      href: "/admin/ipl",
-    },
-    {
-      label: "Saldo Kas Cluster",
-      value: formatRupiah(balance?.balance ?? 0),
-      icon: "wallet",
-      accent: "#0891b2",
-      href: "/admin/transaksi",
-    },
-    {
-      label: "Info & Banner Aktif",
-      value: `${infoCount} / ${bannerCount}`,
-      icon: "megaphone",
-      accent: "#8b5cf6",
-      href: "/admin/informasi",
-    },
-    {
-      label: "Pengaduan Baru",
-      value: String(newComplaints),
-      icon: "chat",
-      accent: "#eab308",
-      href: "/admin/pengaduan",
-    },
+    { label: "Kelola Warga", href: "/admin/warga", icon: "user" },
+    { label: "Kelola Saldo", href: "/admin/transaksi", icon: "wallet" },
+    { label: "Kelola Transaksi", href: "/admin/transaksi", icon: "receipt" },
+    { label: "Buku Kas", href: "/admin/bukukas", icon: "apps" },
+    { label: "Kelola Informasi", href: "/admin/informasi", icon: "help" },
+    { label: "Kelola Arsip", href: "/admin/arsip", icon: "history" },
+    { label: "Kelola Surat", href: "/admin/surat", icon: "receipt" },
+    { label: "Kelola Vote", href: "/admin/vote", icon: "grid" },
+    { label: "Kelola Saran", href: "/admin/pengaduan", icon: "chat" },
+    { label: "Kelola Banner", href: "/admin/banner", icon: "park" },
+    { label: "Kelola Kontribusi", href: "/admin/kontribusi", icon: "heart" },
+    { label: "IPL Takeover", href: "/admin/ipl", icon: "swap" },
+    { label: "Tunggakan IPL", href: "/admin/tunggakan", icon: "scan" },
+    { label: "Tunggakan Kas", href: "/admin/tunggakan", icon: "scan" },
+    { label: "Tunggakan PKK", href: "/admin/tunggakan", icon: "scan" },
+    { label: "Sistag IPL", href: "/admin/tunggakan", icon: "arrow-right" },
+    { label: "Sistag Kas", href: "/admin/tunggakan", icon: "arrow-right" },
+    { label: "Sistag PKK", href: "/admin/tunggakan", icon: "arrow-right" },
+    { label: "Pengaturan", href: "/admin/warga", icon: "shield" },
   ];
 
   return (
-    <div className="px-5 py-6 lg:px-8">
-      <AdminPageHeader
-        title="Dashboard"
-        subtitle="Ringkasan aktivitas komunitas Puri Pelican"
-      />
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        {stats.map((s) => (
-          <Link
-            key={s.label}
-            href={s.href}
-            className="card p-4 transition hover:shadow-soft lg:p-5"
+    <div className="min-h-screen bg-[#dedede] lg:bg-[var(--background)]">
+      <header className="sticky top-0 z-10 flex items-center border-b border-black/15 bg-[#726d70] px-4 py-3 text-white shadow-sm lg:rounded-b-2xl lg:px-6">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white">
+            <Icon name="home" size={18} />
+          </span>
+          <p className="text-3 font-semibold">Pelican</p>
+        </div>
+        <form action={adminLogout} className="ml-auto">
+          <button
+            type="submit"
+            className="rounded-lg p-2 text-white/90 transition hover:bg-white/10"
+            aria-label="Keluar"
+            title="Keluar"
           >
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ backgroundColor: `${s.accent}1a`, color: s.accent }}
-            >
-              <Icon name={s.icon} size={20} />
-            </span>
-            <p className="mt-3 text-lg font-extrabold text-ink lg:text-xl">
-              {s.value}
-            </p>
-            <p className="text-xs text-ink-faint">{s.label}</p>
-          </Link>
-        ))}
-      </div>
+            <Icon name="arrow-right" size={18} />
+          </button>
+        </form>
+      </header>
 
-      {/* Quick actions */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="card p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-bold text-ink">Transaksi Terbaru</h2>
+      <section className="mx-auto w-full max-w-[520px] px-5 py-4 lg:max-w-none lg:px-8">
+        <h1 className="mb-4 text-[34px] font-bold text-black">Menu Admin</h1>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {menus.map((m) => (
             <Link
-              href="/admin/transaksi"
-              className="text-xs font-semibold text-pelican-600"
+              key={m.label}
+              href={m.href}
+              className="rounded-xl bg-[#1f97ef] px-3 py-4 text-center text-black shadow-[0_2px_6px_rgba(0,0,0,0.16)] transition hover:brightness-95 active:translate-y-px"
             >
-              Lihat semua
+              <span className="mx-auto flex h-8 w-8 items-center justify-center text-black">
+                <Icon name={m.icon} size={22} />
+              </span>
+              <span className="mt-2 block text-[17px] font-semibold leading-snug">
+                {m.label}
+              </span>
             </Link>
-          </div>
-          {recentTx.length === 0 ? (
-            <p className="py-8 text-center text-sm text-ink-faint">
-              Belum ada transaksi.
-            </p>
-          ) : (
-            <div className="divide-y divide-black/5">
-              {recentTx.map((t) => {
-                const masuk = t.mutation === "DEBIT";
-                return (
-                  <div key={t.id} className="flex items-center gap-3 py-3">
-                    <span
-                      className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-                        masuk
-                          ? "bg-pelican-50 text-pelican-600"
-                          : "bg-red-50 text-red-500"
-                      }`}
-                    >
-                      <Icon
-                        name="arrow-right"
-                        size={18}
-                        className={masuk ? "rotate-90" : "-rotate-90"}
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">
-                        {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
-                      </p>
-                      <p className="truncate text-[11px] text-ink-faint">
-                        {t.notes ?? formatDateTime(t.createdAt)}
-                      </p>
-                    </div>
-                    <p
-                      className={`text-sm font-bold ${
-                        masuk ? "text-pelican-700" : "text-red-500"
-                      }`}
-                    >
-                      {masuk ? "+" : "−"}
-                      {formatRupiah(t.amount)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          ))}
         </div>
 
-        <div className="card flex flex-col gap-2.5 p-5">
-          <h2 className="mb-1 text-base font-bold text-ink">Aksi Cepat</h2>
-          <QuickLink href="/admin/ipl" icon="home-pay" label="Atur IPL & Terbitkan Tagihan" />
-          <QuickLink href="/admin/informasi" icon="megaphone" label="Tambah Informasi" />
-          <QuickLink href="/admin/banner" icon="park" label="Kelola Banner" />
-          <QuickLink href="/admin/warga" icon="user" label="Kelola Data Rumah" />
+        <div className="pb-10 pt-7 text-center">
+          <Link
+            href="/"
+            className="text-[22px] font-semibold uppercase tracking-wide text-blue-700 underline-offset-2 hover:underline"
+          >
+            Ke Halaman Utama
+          </Link>
         </div>
-      </div>
+      </section>
     </div>
-  );
-}
-
-function QuickLink({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: IconName;
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 rounded-2xl border border-black/5 p-3 transition hover:border-pelican-200 hover:bg-pelican-50/50"
-    >
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-50 text-pelican-600">
-        <Icon name={icon} size={18} />
-      </span>
-      <span className="flex-1 text-sm font-semibold text-ink">{label}</span>
-      <Icon name="chevron-right" size={18} className="text-ink-faint" />
-    </Link>
   );
 }

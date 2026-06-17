@@ -23,9 +23,14 @@ const nav: { label: string; href: string; icon: IconName }[] = [
 
 export function AdminSidebar({ adminName }: { adminName: string }) {
   const pathname = usePathname();
+  const dashboardOnly = pathname === "/admin";
 
   return (
-    <aside className="flex shrink-0 flex-col border-b border-black/5 bg-white lg:h-screen lg:w-64 lg:border-b-0 lg:border-r">
+    <aside
+      className={`shrink-0 flex-col border-b border-black/5 bg-white lg:h-screen lg:w-64 lg:border-b-0 lg:border-r ${
+        dashboardOnly ? "hidden lg:flex" : "flex"
+      }`}
+    >
       <div className="flex items-center gap-2 px-5 py-5 text-lg font-extrabold text-pelican-700">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pelican-600 text-white">
           P
