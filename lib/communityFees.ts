@@ -51,8 +51,8 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
     prisma.house.findMany({
       where:
         feeType === "KAS"
-          ? { payCash: true, cashAmount: { not: null } }
-          : { payPkk: true, pkkAmount: { not: null } },
+          ? { payCash: true }
+          : { payPkk: true },
       select: {
         id: true,
         block: true,
@@ -126,8 +126,8 @@ export async function getCommunityFeeRows({
   const houseWhere = {
     ...(selectedBlock !== "SEMUA" ? { block: selectedBlock } : {}),
     ...(feeType === "KAS"
-      ? { payCash: true, cashAmount: { not: null } }
-      : { payPkk: true, pkkAmount: { not: null } }),
+      ? { payCash: true }
+      : { payPkk: true }),
   };
 
   const [{ houses: allHouses, txs, paidByHouse, paidYears }, blocks] = await Promise.all([
@@ -135,8 +135,8 @@ export async function getCommunityFeeRows({
     prisma.house.findMany({
       where:
         feeType === "KAS"
-          ? { payCash: true, cashAmount: { not: null } }
-          : { payPkk: true, pkkAmount: { not: null } },
+          ? { payCash: true }
+          : { payPkk: true },
       distinct: ["block"],
       select: { block: true },
       orderBy: { block: "asc" },
@@ -144,9 +144,7 @@ export async function getCommunityFeeRows({
   ]);
   const houses = allHouses.filter((h) => {
     if (selectedBlock !== "SEMUA" && h.block !== selectedBlock) return false;
-    return feeType === "KAS"
-      ? h.cashAmount !== null
-      : h.pkkAmount !== null;
+    return true;
   });
 
   const now = new Date();
