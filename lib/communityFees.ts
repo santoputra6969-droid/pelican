@@ -97,18 +97,15 @@ function resolveStartYear({
   includeAllYears,
   fallbackYear,
   paidYears,
-  houseCreatedAt,
 }: {
   includeAllYears: boolean;
   fallbackYear: number;
   paidYears: number[];
-  houseCreatedAt?: Date;
 }) {
   if (!includeAllYears) return fallbackYear;
 
   const years = [fallbackYear];
   if (paidYears.length > 0) years.push(Math.min(...paidYears));
-  if (houseCreatedAt) years.push(houseCreatedAt.getFullYear());
   return Math.min(...years);
 }
 
@@ -159,7 +156,6 @@ export async function getCommunityFeeRows({
       includeAllYears,
       fallbackYear: targetYear,
       paidYears,
-      houseCreatedAt: h.createdAt,
     });
     const amount = feeType === "KAS" ? (h.cashAmount ?? 20000) : (h.pkkAmount ?? 5000);
     const houseKey = `${h.block.toUpperCase()}::${h.no.toUpperCase()}`;
@@ -222,7 +218,6 @@ export async function getCommunityFeeStatusForHouse({
     includeAllYears,
     fallbackYear: nowYear,
     paidYears,
-    houseCreatedAt: house.createdAt,
   });
   const limitMonth = (year: number) => (year === nowYear ? now.getMonth() + 1 : 12);
   const paid = paidByHouse.get(`${house.block.toUpperCase()}::${house.no.toUpperCase()}`) ?? new Set<string>();

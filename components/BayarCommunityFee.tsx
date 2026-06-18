@@ -59,6 +59,7 @@ export function BayarCommunityFee({
   }, [state]);
 
   const totalDue = dueBills.reduce((sum, bill) => sum + bill.amount, 0);
+  const oldestBill = dueBills[0] ?? null;
 
   return (
     <>
@@ -85,9 +86,15 @@ export function BayarCommunityFee({
               {dueBills.length > 0 ? `${dueBills.length} bulan` : "Lunas"}
             </span>
           </div>
-          <form action={formAction} className="mt-4">
+          {oldestBill && (
+            <p className="mt-3 text-xs font-semibold text-ink-faint">
+              Pembayaran satuan hanya dibuka untuk tunggakan paling lama: {formatPeriod(oldestBill.year, oldestBill.month)}
+            </p>
+          )}
+          <form action={formAction} className="mt-4 space-y-3">
             <input type="hidden" name="feeType" value={feeType} />
-            <SubmitButton disabled={dueBills.length === 0} feeType={feeType} />
+            <input type="hidden" name="scope" value="all" />
+            <SubmitButton disabled={dueBills.length === 0} feeType={feeType} label="Bayar Sekaligus" />
           </form>
           {state && !state.ok && (
             <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
@@ -103,18 +110,34 @@ export function BayarCommunityFee({
           <div className="card p-6 text-center text-sm text-ink-faint">Tidak ada tunggakan {feeType.toLowerCase()}.</div>
         ) : (
           <div className="card divide-y divide-black/5">
-            {dueBills.map((bill) => (
+            {dueBills.map((bill, index) => {
+              const canPayDirect = index === 0;
+              return (
               <div key={`${bill.year}-${bill.month}`} className="flex items-center gap-3 p-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
                   <Icon name={feeType === "PKK" ? "heart" : "wallet"} size={18} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-ink">{feeType} {formatPeriod(bill.year, bill.month)}</p>
-                  <p className="text-[11px] text-ink-faint">Belum dibayar</p>
+                  <p className="text-[11px] text-ink-faint">
+                    {canPayDirect ? "Belum dibayar" : "Bayar bulan sebelumnya terlebih dahulu"}
+                  </p>
                 </div>
-                <p className="text-sm font-bold text-ink">{formatRupiah(bill.amount)}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-bold text-ink">{formatRupiah(bill.amount)}</p>
+                  <form action={formAction}>
+                    <input type="hidden" name="feeType" value={feeType} />
+                    <input type="hidden" name="scope" value="oldest" />
+                    <SubmitButton
+                      disabled={!canPayDirect || dueBills.length === 0}
+                      feeType={feeType}
+                      label="Bayar"
+                      compact
+                    />
+                  </form>
+                </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </section>
@@ -142,12 +165,26 @@ export function BayarCommunityFee({
   );
 }
 
-function SubmitButton({ disabled, feeType }: { disabled: boolean; feeType: "KAS" | "PKK" }) {
+function SubmitButton({
+  disabled,
+  feeType,
+  label,
+  compact = false,
+}: {
+  disabled: boolean;
+  feeType: "KAS" | "PKK";
+  label: string;
+  compact?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={disabled || pending} className="btn-primary w-full disabled:opacity-60">
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className={`${compact ? "inline-flex rounded-xl px-4 py-2 text-sm" : "btn-primary w-full"} items-center justify-center gap-2 font-bold disabled:opacity-60 ${compact ? "bg-pelican-600 text-white" : ""}`}
+    >
       <Icon name={feeType === "PKK" ? "heart" : "wallet"} size={18} />
-      {pending ? "Memproses..." : `Bayar ${feeType}`}
+      {pending ? "Memproses..." : label}
     </button>
   );
 }

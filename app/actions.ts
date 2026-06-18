@@ -282,6 +282,8 @@ export async function createCommunityFeePayment(
 ): Promise<CreatePaymentResult> {
   const rawFeeType = String(formData.get("feeType") ?? "").toUpperCase();
   const feeType = rawFeeType === "PKK" ? "PKK" : rawFeeType === "KAS" ? "KAS" : null;
+  const rawScope = String(formData.get("scope") ?? "all").toLowerCase();
+  const scope = rawScope === "oldest" ? "oldest" : "all";
 
   const store = await cookies();
   const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
@@ -304,16 +306,17 @@ export async function createCommunityFeePayment(
     return { ok: false, message: `Tidak ada tunggakan ${feeType.toLowerCase()} untuk dibayar.` };
   }
 
-  const total = status.totalDue;
+  const payableBills = scope === "oldest" ? [status.dueBills[0]] : status.dueBills;
+  const total = payableBills.reduce((sum, bill) => sum + bill.amount, 0);
   const orderId = `${feeType}-${houseId}-${Date.now()}-${Math.floor(
     Math.random() * 1000
   )
     .toString()
     .padStart(3, "0")}`;
-  const refs = status.dueBills.map(
+  const refs = payableBills.map(
     (bill) => `C${feeType}-${bill.year}-${String(bill.month).padStart(2, "0")}`
   );
-  const items = status.dueBills.map((bill) => ({
+  const items = payableBills.map((bill) => ({
     id: `${feeType}-${bill.year}${String(bill.month).padStart(2, "0")}`,
     price: bill.amount,
     quantity: 1,
