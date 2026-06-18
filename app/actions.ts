@@ -283,7 +283,11 @@ export async function createCommunityFeePayment(
   const rawFeeType = String(formData.get("feeType") ?? "").toUpperCase();
   const feeType = rawFeeType === "PKK" ? "PKK" : rawFeeType === "KAS" ? "KAS" : null;
   const rawScope = String(formData.get("scope") ?? "all").toLowerCase();
-  const scope = rawScope === "oldest" ? "oldest" : "all";
+  const scope = rawScope === "oldest" ? "oldest" : rawScope === "selected" ? "selected" : "all";
+  const selectedPeriods = String(formData.get("selectedPeriods") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^\d{4}-\d{2}$/.test(s));
 
   const store = await cookies();
   const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
@@ -306,7 +310,36 @@ export async function createCommunityFeePayment(
     return { ok: false, message: `Tidak ada tunggakan ${feeType.toLowerCase()} untuk dibayar.` };
   }
 
-  const payableBills = scope === "oldest" ? [status.dueBills[0]] : status.dueBills;
+  let payableBills = scope === "oldest" ? [status.dueBills[0]] : status.dueBills;
+
+  if (scope === "selected") {
+    const dueKeys = status.dueBills.map((bill) =>
+      `${bill.year}-${String(bill.month).padStart(2, "0")}`
+    );
+    const selectedUnique = [...new Set(selectedPeriods)];
+    if (selectedUnique.length === 0) {
+      return { ok: false, message: "Pilih minimal 1 bulan untuk Bayar Sekaligus." };
+    }
+
+    const selectedIndexes = selectedUnique.map((key) => dueKeys.indexOf(key));
+    if (selectedIndexes.some((index) => index < 0)) {
+      return { ok: false, message: "Pilihan bulan tidak valid. Silakan refresh halaman." };
+    }
+
+    const maxIndex = Math.max(...selectedIndexes);
+    const mustPayKeys = dueKeys.slice(0, maxIndex + 1);
+    const selectedSet = new Set(selectedUnique);
+    const isPrefix = mustPayKeys.every((key) => selectedSet.has(key)) && selectedSet.size === mustPayKeys.length;
+    if (!isPrefix) {
+      return {
+        ok: false,
+        message: "Bayar Sekaligus harus urut dari tunggakan bulan paling lama.",
+      };
+    }
+
+    payableBills = status.dueBills.slice(0, maxIndex + 1);
+  }
+
   const total = payableBills.reduce((sum, bill) => sum + bill.amount, 0);
   const orderId = `${feeType}-${houseId}-${Date.now()}-${Math.floor(
     Math.random() * 1000

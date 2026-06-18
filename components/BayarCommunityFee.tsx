@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createCommunityFeePayment, type CreatePaymentResult } from "@/app/actions";
 import { Icon } from "@/components/Icon";
@@ -24,6 +24,10 @@ declare global {
 
 type FeeBill = { year: number; month: number; amount: number };
 
+function billKey(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
 export function BayarCommunityFee({
   feeType,
   dueBills,
@@ -38,6 +42,14 @@ export function BayarCommunityFee({
   const [state, formAction] = useActionState<CreatePaymentResult, FormData>(
     createCommunityFeePayment,
     null
+  );
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const orderedDueBills = useMemo(
+    () => [...dueBills].sort((a, b) => (a.year === b.year ? a.month - b.month : a.year - b.year)),
+    [dueBills]
+  );
+  const [selectedBulkKeys, setSelectedBulkKeys] = useState<string[]>(
+    orderedDueBills[0] ? [billKey(orderedDueBills[0].year, orderedDueBills[0].month)] : []
   );
 
   useEffect(() => {
@@ -58,8 +70,31 @@ export function BayarCommunityFee({
     }
   }, [state]);
 
-  const totalDue = dueBills.reduce((sum, bill) => sum + bill.amount, 0);
-  const oldestBill = dueBills[0] ?? null;
+  useEffect(() => {
+    setSelectedBulkKeys(
+      orderedDueBills[0] ? [billKey(orderedDueBills[0].year, orderedDueBills[0].month)] : []
+    );
+  }, [orderedDueBills]);
+
+  const totalDue = orderedDueBills.reduce((sum, bill) => sum + bill.amount, 0);
+  const oldestBill = orderedDueBills[0] ?? null;
+  const selectedBulkBills = orderedDueBills.filter((bill) =>
+    selectedBulkKeys.includes(billKey(bill.year, bill.month))
+  );
+  const selectedBulkTotal = selectedBulkBills.reduce((sum, bill) => sum + bill.amount, 0);
+
+  const toggleBulkBill = (index: number) => {
+    const next = orderedDueBills.slice(0, index + 1).map((bill) => billKey(bill.year, bill.month));
+    const current = selectedBulkKeys;
+    const isSame =
+      current.length === next.length && current.every((value, i) => value === next[i]);
+    if (isSame) {
+      const fallback = orderedDueBills.slice(0, index).map((bill) => billKey(bill.year, bill.month));
+      setSelectedBulkKeys(fallback.length > 0 ? fallback : current);
+      return;
+    }
+    setSelectedBulkKeys(next);
+  };
 
   return (
     <>
@@ -91,11 +126,66 @@ export function BayarCommunityFee({
               Pembayaran satuan hanya dibuka untuk tunggakan paling lama: {formatPeriod(oldestBill.year, oldestBill.month)}
             </p>
           )}
-          <form action={formAction} className="mt-4 space-y-3">
-            <input type="hidden" name="feeType" value={feeType} />
-            <input type="hidden" name="scope" value="all" />
-            <SubmitButton disabled={dueBills.length === 0} feeType={feeType} label="Bayar Sekaligus" />
-          </form>
+          <button
+            type="button"
+            onClick={() => setBulkOpen((v) => !v)}
+            disabled={orderedDueBills.length === 0}
+            className="mt-4 w-full rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm font-bold text-ink disabled:opacity-60"
+          >
+            {bulkOpen ? "Tutup Pilihan Bayar Sekaligus" : "Pilih Bulan Bayar Sekaligus"}
+          </button>
+          {bulkOpen && orderedDueBills.length > 0 && (
+            <div className="mt-3 rounded-2xl border border-black/10 bg-black/[0.02] p-3">
+              <p className="text-xs font-semibold text-ink-faint">
+                Bayar Sekaligus wajib urut dari bulan terlama (tidak bisa lompat bulan)
+              </p>
+              <div className="mt-2 max-h-64 space-y-2 overflow-y-auto pr-1">
+                {orderedDueBills.map((bill, index) => {
+                  const key = billKey(bill.year, bill.month);
+                  const checked = selectedBulkKeys.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleBulkBill(index)}
+                      className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                        checked ? "border-pelican-300 bg-pelican-50" : "border-black/10 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex h-4 w-4 items-center justify-center rounded border ${
+                              checked ? "border-pelican-500 bg-pelican-500 text-white" : "border-black/20"
+                            }`}
+                          >
+                            {checked && <Icon name="check" size={10} />}
+                          </span>
+                          <span className="text-sm font-semibold text-ink">
+                            {feeType} {formatPeriod(bill.year, bill.month)}
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-ink">{formatRupiah(bill.amount)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <form action={formAction} className="mt-3 space-y-2">
+                <input type="hidden" name="feeType" value={feeType} />
+                <input type="hidden" name="scope" value="selected" />
+                <input type="hidden" name="selectedPeriods" value={selectedBulkKeys.join(",")} />
+                <p className="text-xs font-semibold text-ink-faint">
+                  {selectedBulkBills.length} bulan dipilih - {formatRupiah(selectedBulkTotal)}
+                </p>
+                <SubmitButton
+                  disabled={selectedBulkBills.length === 0}
+                  feeType={feeType}
+                  label="Bayar Sekaligus"
+                />
+              </form>
+            </div>
+          )}
           {state && !state.ok && (
             <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
               {state.message}
@@ -106,11 +196,11 @@ export function BayarCommunityFee({
 
       <section className="mt-6 px-5">
         <h2 className="mb-3 text-base font-bold text-ink">Rincian Tunggakan</h2>
-        {dueBills.length === 0 ? (
+        {orderedDueBills.length === 0 ? (
           <div className="card p-6 text-center text-sm text-ink-faint">Tidak ada tunggakan {feeType.toLowerCase()}.</div>
         ) : (
           <div className="card divide-y divide-black/5">
-            {dueBills.map((bill, index) => {
+            {orderedDueBills.map((bill, index) => {
               const canPayDirect = index === 0;
               return (
               <div key={`${bill.year}-${bill.month}`} className="flex items-center gap-3 p-4">
@@ -129,7 +219,7 @@ export function BayarCommunityFee({
                     <input type="hidden" name="feeType" value={feeType} />
                     <input type="hidden" name="scope" value="oldest" />
                     <SubmitButton
-                      disabled={!canPayDirect || dueBills.length === 0}
+                      disabled={!canPayDirect || orderedDueBills.length === 0}
                       feeType={feeType}
                       label="Bayar"
                       compact
