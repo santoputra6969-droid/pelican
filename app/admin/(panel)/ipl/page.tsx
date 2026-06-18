@@ -6,11 +6,8 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function AdminIplPage() {
-  const [houseCount, payIplCount, sampleHouse, recentBills, houses] =
+  const [recentBills, houses] =
     await Promise.all([
-      prisma.house.count(),
-      prisma.house.count({ where: { payIpl: true } }),
-      prisma.house.findFirst({ where: { payIpl: true }, orderBy: { id: "asc" } }),
       prisma.bill.groupBy({
         by: ["year", "month"],
         _count: { _all: true },
@@ -39,9 +36,6 @@ export default async function AdminIplPage() {
         subtitle="Atur nominal iuran & terbitkan tagihan bulanan"
       />
       <IplManager
-        iplAmount={sampleHouse?.iplAmount ?? 252000}
-        houseCount={houseCount}
-        payIplCount={payIplCount}
         periods={recentBills.map((b) => ({
           year: b.year,
           month: b.month,

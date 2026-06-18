@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
-import { adminLogout } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +20,7 @@ export default async function AdminDashboard() {
     { label: "Kelola Saran", href: "/admin/pengaduan", icon: "chat" },
     { label: "Kelola Banner", href: "/admin/banner", icon: "park" },
     { label: "Kelola Kontribusi", href: "/admin/kontribusi", icon: "heart" },
-    { label: "IPL Takeover", href: "/admin/ipl", icon: "swap" },
+    { label: "Harga IPL", href: "/admin/ipl", icon: "home-pay" },
     { label: "Tunggakan IPL", href: "/admin/tunggakan", icon: "scan" },
     { label: "Tunggakan Kas", href: "/admin/tunggakan-kas", icon: "scan" },
     { label: "Tunggakan PKK", href: "/admin/tunggakan-pkk", icon: "scan" },
@@ -40,16 +39,6 @@ export default async function AdminDashboard() {
           </span>
           <p className="text-3 font-semibold">Pelican</p>
         </div>
-        <form action={adminLogout} className="ml-auto">
-          <button
-            type="submit"
-            className="rounded-lg p-2 text-white/90 transition hover:bg-white/10"
-            aria-label="Keluar"
-            title="Keluar"
-          >
-            <Icon name="arrow-right" size={18} />
-          </button>
-        </form>
       </header>
 
       <section className="mx-auto w-full max-w-[520px] px-5 py-4 lg:max-w-none lg:px-8">
