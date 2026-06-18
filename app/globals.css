@@ -87,7 +87,7 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 8mm;
+    margin: 10mm;
   }
 
   * {
@@ -141,12 +141,14 @@ body {
   }
 
   .print-report {
+    margin-top: 2mm;
     margin-bottom: 8px;
   }
 
   .print-report__header {
     text-align: center;
     border-bottom: 2px solid #111827;
+    padding-top: 2px;
     padding-bottom: 8px;
     margin-bottom: 8px;
   }

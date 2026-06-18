@@ -123,7 +123,7 @@ export function TunggakanReport({
     const autoTable = autoTableModule.default;
     const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 8;
+    const margin = 12;
 
     let kopDataUrl: string | null = null;
     try {
@@ -140,7 +140,7 @@ export function TunggakanReport({
     if (kopDataUrl) {
       const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
       doc.addImage(kopDataUrl, imageType, margin, currentY, pageWidth - margin * 2, 27);
-      currentY += 30;
+      currentY += 33;
     }
 
     doc.setFont("helvetica", "bold");
@@ -152,7 +152,7 @@ export function TunggakanReport({
       { align: "center" }
     );
 
-    currentY += 5;
+    currentY += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text(`Dicetak pada ${printedAt} WIB`, pageWidth / 2, currentY, { align: "center" });
@@ -183,7 +183,7 @@ export function TunggakanReport({
       : [["TOTAL", "", "", `${totalMonths} bulan`, formatRupiah(selectedTotal)], ["TOTAL NETT (-0.7%)", "", "", "", formatRupiah(totalNett)]];
 
     autoTable(doc, {
-      startY: currentY + 4,
+      startY: currentY + 6,
       head,
       body,
       foot,
@@ -237,7 +237,7 @@ export function TunggakanReport({
 
   return (
     <div>
-      <div className="print-report mb-4 print-only">
+      <div className="print-report mb-4 print-only pt-2">
         <div className="print-report__header">
           {kopOk ? (
             <img
