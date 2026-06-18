@@ -76,9 +76,10 @@ export default async function HomePage() {
             <Link
               href="/admin/login"
               aria-label="Login Admin"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 transition active:scale-90"
+              className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white/15 px-3 text-xs font-bold tracking-wide text-white transition active:scale-95"
             >
-              <Icon name="shield" size={21} />
+              Admin
+              <Icon name="arrow-right" size={15} />
             </Link>
             <Link
               href="/informasi"
