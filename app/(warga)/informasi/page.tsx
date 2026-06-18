@@ -14,7 +14,7 @@ export default async function InformasiPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageHeader title="Informasi" subtitle="Kabar terbaru dari pengelola" />
+      <PageHeader title="Informasi" subtitle="Kabar terbaru dari pengurus" />
 
       <section className="-mt-2 px-5">
         {infos.length === 0 ? (

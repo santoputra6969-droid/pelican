@@ -22,9 +22,7 @@ export default async function AdminLoginPage({
           Puri Pelican
         </div>
         <div className="relative">
-          <h1 className="text-3xl font-extrabold leading-tight">
-            Panel Pengelola
-          </h1>
+          <h1 className="text-3xl font-extrabold leading-tight">Panel Pengurus</h1>
           <p className="mt-3 max-w-sm text-white/80">
             Kelola tagihan IPL, informasi warga, banner, dan data hunian dalam
             satu dashboard.
@@ -45,9 +43,7 @@ export default async function AdminLoginPage({
             Puri Pelican
           </div>
           <h2 className="text-2xl font-extrabold text-ink">Masuk Admin</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            Gunakan kredensial pengelola Anda.
-          </p>
+          <p className="mt-1 text-sm text-ink-soft">Gunakan kredensial pengurus Anda.</p>
 
           <AdminLoginForm next={next} />
 

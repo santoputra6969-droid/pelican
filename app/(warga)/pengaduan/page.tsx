@@ -33,7 +33,7 @@ export default async function PengaduanPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageHeader title="Pengaduan" subtitle="Sampaikan keluhan ke pengelola" />
+      <PageHeader title="Pengaduan" subtitle="Sampaikan keluhan ke pengurus" />
 
       <section className="-mt-2 px-5">
         <PengaduanForm />
@@ -73,7 +73,7 @@ export default async function PengaduanPage() {
                 {c.reply && (
                   <div className="mt-3 rounded-2xl bg-pelican-50/60 p-3">
                     <p className="text-[11px] font-bold text-pelican-700">
-                      Tanggapan Pengelola
+                      Tanggapan Pengurus
                     </p>
                     <p className="mt-1 text-xs text-ink-soft">{c.reply}</p>
                   </div>

@@ -42,7 +42,7 @@ export default async function SuratPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageHeader title="Ajukan Surat" subtitle="Permohonan surat ke pengelola" />
+      <PageHeader title="Ajukan Surat" subtitle="Permohonan surat ke pengurus" />
 
       <section className="-mt-2 px-5">
         <SuratForm defaultName={house.ownerName ?? undefined} />
@@ -78,7 +78,7 @@ export default async function SuratPage() {
                 <p className="mt-2 text-sm text-ink-soft">{l.purpose}</p>
                 {l.note && (
                   <p className="mt-2 rounded-xl bg-black/[0.03] px-3 py-2 text-xs text-ink-soft">
-                    <span className="font-semibold">Pengelola:</span> {l.note}
+                    <span className="font-semibold">Pengurus:</span> {l.note}
                   </p>
                 )}
                 <p className="mt-2 text-[11px] text-ink-faint">

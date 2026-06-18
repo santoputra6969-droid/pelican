@@ -59,7 +59,7 @@ export default async function KontribusiPage() {
                 )}
                 <p className="mt-3 text-[11px] text-ink-faint">
                   Setoran dapat diserahkan ke pengurus. Catatan dana dikelola
-                  transparan oleh pengelola.
+                  transparan oleh pengurus.
                 </p>
               </div>
             );

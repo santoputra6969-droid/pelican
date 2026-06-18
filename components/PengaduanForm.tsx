@@ -66,7 +66,7 @@ export function PengaduanForm() {
           rows={5}
           required
           maxLength={2000}
-          placeholder="Ceritakan keluhan atau masukan Anda untuk pengelola..."
+          placeholder="Ceritakan keluhan atau masukan Anda untuk pengurus..."
           className="input resize-none"
         />
       </div>

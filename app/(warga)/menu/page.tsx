@@ -65,19 +65,6 @@ export default function MenuPage() {
         </div>
       </section>
 
-      <section className="mt-6 px-5">
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-pelican-700 to-pelican-500 p-5 text-white">
-          <h3 className="text-base font-bold">Butuh bantuan?</h3>
-          <p className="mt-1 text-sm text-white/80">
-            Tim pengelola siap membantu setiap hari, 08.00 - 20.00 WIB.
-          </p>
-          <button className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-pelican-700">
-            <Icon name="chat" size={14} />
-            Hubungi Pengelola
-          </button>
-        </div>
-      </section>
-
       <div className="h-6" />
       <BottomNav />
     </main>

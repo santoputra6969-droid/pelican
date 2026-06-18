@@ -83,7 +83,7 @@ export function AdminSidebar({ adminName }: { adminName: string }) {
             <p className="truncate text-sm font-semibold text-ink">
               {adminName}
             </p>
-            <p className="text-[11px] text-ink-faint">Pengelola</p>
+            <p className="text-[11px] text-ink-faint">Pengurus</p>
           </div>
         </div>
         <form action={adminLogout}>

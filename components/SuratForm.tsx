@@ -96,7 +96,7 @@ export function SuratForm({ defaultName }: { defaultName?: string }) {
       {state?.ok && (
         <p className="flex items-center gap-1.5 rounded-xl bg-pelican-50 px-3 py-2 text-xs font-semibold text-pelican-700">
           <Icon name="check" size={14} />
-          Pengajuan terkirim. Akan diproses pengelola.
+          Pengajuan terkirim. Akan diproses pengurus.
         </p>
       )}
 
