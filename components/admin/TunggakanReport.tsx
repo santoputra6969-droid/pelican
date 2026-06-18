@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { formatPeriod, formatRupiah } from "@/lib/format";
-import { isIOSSafari } from "@/lib/printUtils";
 
 type Row = {
   id: number;
@@ -48,6 +47,7 @@ export function TunggakanReport({
     () => rows.filter((r) => selectedIds.includes(r.id)),
     [rows, selectedIds]
   );
+  const useRincianBulan = reportLabel === "Sistag IPL";
   const selectedTotal = selectedRows.reduce((s, r) => s + r.total, 0);
   const totalNett = Math.round(selectedTotal * 0.993);
   const allSelected = rows.length > 0 && selectedIds.length === rows.length;
@@ -100,177 +100,139 @@ export function TunggakanReport({
     URL.revokeObjectURL(url);
   }
 
-  function escapeHtml(value: string) {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  async function loadImageAsDataUrl(imageUrl: string) {
+    const res = await fetch(imageUrl);
+    if (!res.ok) throw new Error("Gagal memuat gambar kop");
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Gagal mengubah gambar ke data URL"));
+      reader.readAsDataURL(blob);
+    });
   }
 
-  function printViaTemplate() {
-    const win = window.open("", "_blank");
-    if (!win) {
-      window.print();
-      return;
+  async function printPdf() {
+    if (typeof window === "undefined") return;
+
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
+    const autoTable = autoTableModule.default;
+    const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 8;
+
+    let kopDataUrl: string | null = null;
+    try {
+      kopDataUrl = await loadImageAsDataUrl(`${window.location.origin}${kopSrc}`);
+    } catch {
+      try {
+        kopDataUrl = await loadImageAsDataUrl(`${window.location.origin}/kop-surat.jpg`);
+      } catch {
+        kopDataUrl = null;
+      }
     }
 
-    const rowsHtml = selectedRows
-      .map(
-        (r, idx) => `
-          <tr>
-            <td class="c tc">${idx + 1}</td>
-            <td class="c">${escapeHtml(`${r.block} No ${r.no}`)}</td>
-            <td class="c">${escapeHtml(r.ownerName ?? "Belum pengkinian data")}</td>
-            <td class="c nw">${r.months} bulan</td>
-            <td class="c tr nw">${formatRupiah(r.total)}</td>
-          </tr>
-        `
-      )
-      .join("");
+    let currentY = margin;
+    if (kopDataUrl) {
+      const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      doc.addImage(kopDataUrl, imageType, margin, currentY, pageWidth - margin * 2, 27);
+      currentY += 30;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(
+      `${reportLabel} Cluster Puri Pelican Blok ${selectedBlock === "SEMUA" ? "Semua" : selectedBlock}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" }
+    );
+
+    currentY += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Dicetak pada ${printedAt} WIB`, pageWidth / 2, currentY, { align: "center" });
 
     const totalMonths = selectedRows.reduce((acc, r) => acc + r.months, 0);
-    const titleBlock = selectedBlock === "SEMUA" ? "Semua" : selectedBlock;
-    const kopUrl = `${window.location.origin}${kopSrc}`;
 
-    const html = `
-      <!doctype html>
-      <html lang="id">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>PDF Tunggakan IPL</title>
-          <style>
-            @page { size: A4; margin: 8mm; }
-            * {
-              box-sizing: border-box;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              background: #fff;
-              color: #000;
-              font-family: Arial, Helvetica, sans-serif;
-              font-size: 11px;
-            }
-            .wrap {
-              width: 100%;
-            }
-            .kop {
-              width: 100%;
-              display: block;
-              border-bottom: 2px solid #111;
-              padding-bottom: 5px;
-              margin-bottom: 6px;
-            }
-            .title {
-              text-align: center;
-              font-size: 28px;
-              font-weight: 700;
-              line-height: 1.25;
-              margin: 0;
-            }
-            .meta {
-              text-align: center;
-              font-size: 20px;
-              margin: 2px 0 8px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              table-layout: fixed;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 2px 4px;
-              font-size: 10px;
-              line-height: 1.2;
-              vertical-align: middle;
-              word-break: break-word;
-            }
-            thead th {
-              background: #fde047;
-              font-weight: 700;
-            }
-            tfoot tr:first-child td {
-              background: #e5e7eb;
-              font-weight: 700;
-            }
-            tfoot tr:last-child td {
-              background: #86efac;
-              font-weight: 700;
-            }
-            .c { text-align: left; }
-            .tc { text-align: center; }
-            .tr { text-align: right; }
-            .nw { white-space: nowrap; }
-            .col-no { width: 6%; }
-            .col-rumah { width: 18%; }
-            .col-nama { width: 34%; }
-            .col-tunggakan { width: 16%; }
-            .col-nominal { width: 26%; }
-            tr { page-break-inside: avoid; }
-            thead { display: table-header-group; }
-          </style>
-        </head>
-        <body>
-          <div class="wrap">
-            <img class="kop" src="${kopUrl}" alt="Kop Surat" />
-            <p class="title">${escapeHtml(reportLabel)} Cluster Puri Pelican Blok ${escapeHtml(titleBlock)}</p>
-            <p class="meta">Dicetak pada ${escapeHtml(printedAt)} WIB</p>
+    const head = useRincianBulan
+      ? [["No", "Blok dan Nomor Rumah", "Total Bulan", "Rincian Bulan"]]
+      : [["No", "Blok & No", "Nama Penghuni", "Tunggakan", "Nominal"]];
 
-            <table>
-              <thead>
-                <tr>
-                  <th class="col-no">No</th>
-                  <th class="col-rumah">Blok &amp; No</th>
-                  <th class="col-nama">Nama Penghuni</th>
-                  <th class="col-tunggakan">Tunggakan</th>
-                  <th class="col-nominal tr">Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="3">TOTAL</td>
-                  <td class="nw">${totalMonths} bulan</td>
-                  <td class="tr nw">${formatRupiah(selectedTotal)}</td>
-                </tr>
-                <tr>
-                  <td colspan="4">TOTAL NETT (-0.7%)</td>
-                  <td class="tr nw">${formatRupiah(totalNett)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <script>
-            window.addEventListener('load', function () {
-              setTimeout(function () {
-                window.print();
-              }, 250);
-            });
-          </script>
-        </body>
-      </html>
-    `;
+    const body = useRincianBulan
+      ? selectedRows.map((r, index) => [
+          String(index + 1),
+          `${r.block} No ${r.no}`,
+          `${r.months} bulan`,
+          r.bills.map((b, i) => `${i + 1}. ${formatPeriod(b.year, b.month)}`).join("\n"),
+        ])
+      : selectedRows.map((r, index) => [
+          String(index + 1),
+          `${r.block} No ${r.no}`,
+          r.ownerName ?? "Belum pengkinian data",
+          `${r.months} bulan`,
+          formatRupiah(r.total),
+        ]);
 
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-  }
+    const foot = useRincianBulan
+      ? [["TOTAL", `${selectedRows.length} rumah`, `${totalMonths} bulan`, ""]]
+      : [["TOTAL", "", "", `${totalMonths} bulan`, formatRupiah(selectedTotal)], ["TOTAL NETT (-0.7%)", "", "", "", formatRupiah(totalNett)]];
 
-  function printPdf() {
-    if (typeof window === "undefined") return;
-    if (isIOSSafari()) {
-      printViaTemplate();
-      return;
-    }
-    window.print();
+    autoTable(doc, {
+      startY: currentY + 4,
+      head,
+      body,
+      foot,
+      theme: "grid",
+      styles: {
+        font: "helvetica",
+        fontSize: 9,
+        cellPadding: 1.6,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        textColor: [0, 0, 0],
+      },
+      headStyles: {
+        fillColor: [253, 224, 71],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+      },
+      footStyles: {
+        fillColor: [229, 231, 235],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+      },
+      didParseCell: (data) => {
+        if (!useRincianBulan && data.section === "foot" && data.row.index === 1) {
+          data.cell.styles.fillColor = [134, 239, 172];
+        }
+        if (data.section !== "head") {
+          if (data.column.index === 0) data.cell.styles.halign = "center";
+          if (!useRincianBulan && data.column.index === 4) data.cell.styles.halign = "right";
+        }
+      },
+      columnStyles: useRincianBulan
+        ? {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 56 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 95 },
+          }
+        : {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 72 },
+            3: { cellWidth: 25 },
+            4: { cellWidth: 45 },
+          },
+    });
+
+    const safeBlock = (selectedBlock === "SEMUA" ? "semua" : selectedBlock).toLowerCase();
+    doc.save(`${reportLabel.toLowerCase().replace(/\s+/g, "-")}-${safeBlock}.pdf`);
   }
 
   return (
@@ -309,37 +271,73 @@ export function TunggakanReport({
           <thead>
             <tr className="bg-yellow-300">
               <th className="border border-black px-2 py-1 text-center">No</th>
-              <th className="border border-black px-2 py-1">Blok &amp; No</th>
-              <th className="border border-black px-2 py-1">Nama Penghuni</th>
-              <th className="border border-black px-2 py-1">Tunggakan</th>
-              <th className="border border-black px-2 py-1 text-right">Nominal</th>
+              {useRincianBulan ? (
+                <>
+                  <th className="border border-black px-2 py-1">Blok dan Nomor Rumah</th>
+                  <th className="border border-black px-2 py-1">Total Bulan</th>
+                  <th className="border border-black px-2 py-1">Rincian Bulan</th>
+                </>
+              ) : (
+                <>
+                  <th className="border border-black px-2 py-1">Blok &amp; No</th>
+                  <th className="border border-black px-2 py-1">Nama Penghuni</th>
+                  <th className="border border-black px-2 py-1">Tunggakan</th>
+                  <th className="border border-black px-2 py-1 text-right">Nominal</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
             {selectedRows.map((r, index) => (
               <tr key={`print-row-${r.id}`}>
                 <td className="border border-black px-2 py-1 text-center">{index + 1}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{r.block} No {r.no}</td>
-                <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{r.months} bulan</td>
-                <td className="border border-black px-2 py-1 text-right whitespace-nowrap">{formatRupiah(r.total)}</td>
+                {useRincianBulan ? (
+                  <>
+                    <td className="border border-black px-2 py-1 whitespace-nowrap">{r.block} No {r.no}</td>
+                    <td className="border border-black px-2 py-1 whitespace-nowrap">{r.months} bulan</td>
+                    <td className="border border-black px-2 py-1 align-top">
+                      <div className="whitespace-pre-line">
+                        {r.bills.map((b, i) => `${i + 1}. ${formatPeriod(b.year, b.month)}`).join("\n")}
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="border border-black px-2 py-1 whitespace-nowrap">{r.block} No {r.no}</td>
+                    <td className="border border-black px-2 py-1">{r.ownerName ?? "Belum pengkinian data"}</td>
+                    <td className="border border-black px-2 py-1 whitespace-nowrap">{r.months} bulan</td>
+                    <td className="border border-black px-2 py-1 text-right whitespace-nowrap">{formatRupiah(r.total)}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-black/10 font-bold">
-              <td className="border border-black px-2 py-1" colSpan={3}>
-                TOTAL
-              </td>
-              <td className="border border-black px-2 py-1">{selectedRows.reduce((acc, r) => acc + r.months, 0)} bulan</td>
-              <td className="border border-black px-2 py-1 text-right">{formatRupiah(selectedTotal)}</td>
-            </tr>
-            <tr className="bg-green-300 font-bold">
-              <td className="border border-black px-2 py-1" colSpan={4}>
-                TOTAL NETT (-0.7%)
-              </td>
-              <td className="border border-black px-2 py-1 text-right">{formatRupiah(totalNett)}</td>
-            </tr>
+            {useRincianBulan ? (
+              <tr className="bg-black/10 font-bold">
+                <td className="border border-black px-2 py-1" colSpan={2}>
+                  TOTAL
+                </td>
+                <td className="border border-black px-2 py-1">{selectedRows.reduce((acc, r) => acc + r.months, 0)} bulan</td>
+                <td className="border border-black px-2 py-1">{selectedRows.length} rumah</td>
+              </tr>
+            ) : (
+              <>
+                <tr className="bg-black/10 font-bold">
+                  <td className="border border-black px-2 py-1" colSpan={3}>
+                    TOTAL
+                  </td>
+                  <td className="border border-black px-2 py-1">{selectedRows.reduce((acc, r) => acc + r.months, 0)} bulan</td>
+                  <td className="border border-black px-2 py-1 text-right">{formatRupiah(selectedTotal)}</td>
+                </tr>
+                <tr className="bg-green-300 font-bold">
+                  <td className="border border-black px-2 py-1" colSpan={4}>
+                    TOTAL NETT (-0.7%)
+                  </td>
+                  <td className="border border-black px-2 py-1 text-right">{formatRupiah(totalNett)}</td>
+                </tr>
+              </>
+            )}
           </tfoot>
         </table>
       </div>

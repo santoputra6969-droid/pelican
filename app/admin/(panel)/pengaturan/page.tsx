@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { setCommunityFeeConfig } from "@/app/admin/actions";
-import { formatRupiah } from "@/lib/format";
+import { createAdminAccount, setCommunityFeeConfig } from "@/app/admin/actions";
+import { formatDate, formatRupiah } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,8 @@ function mode(values: number[]) {
 }
 
 export default async function AdminPengaturanPage() {
-  const houses = await prisma.house.findMany({
+  const [houses, admins] = await Promise.all([
+    prisma.house.findMany({
     select: {
       payCash: true,
       cashAmount: true,
@@ -32,7 +33,12 @@ export default async function AdminPengaturanPage() {
       payIpl: true,
       iplAmount: true,
     },
-  });
+    }),
+    prisma.admin.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, username: true, role: true, createdAt: true },
+    }),
+  ]);
 
   const cashActive = houses.filter((h) => h.payCash).length;
   const pkkActive = houses.filter((h) => h.payPkk).length;
@@ -107,6 +113,57 @@ export default async function AdminPengaturanPage() {
             </div>
             <button type="submit" className="btn-primary w-full">Simpan Pengaturan PKK</button>
           </ActionForm>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="card p-5">
+          <h2 className="text-base font-bold text-ink">Tambah Login Pengurus</h2>
+          <p className="mt-1 text-xs text-ink-soft">
+            Buat akun baru agar beberapa pengurus bisa login dengan username dan kata sandi masing-masing.
+          </p>
+          <ActionForm action={createAdminAccount} className="mt-4 space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Nama Pengurus</label>
+              <input name="name" className="input" required placeholder="Contoh: Admin B" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Username</label>
+              <input
+                name="username"
+                className="input"
+                required
+                minLength={3}
+                maxLength={30}
+                pattern="[A-Za-z0-9._-]+"
+                placeholder="contoh: adminb"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Kata Sandi</label>
+              <input name="password" type="password" className="input" required minLength={6} />
+            </div>
+            <button type="submit" className="btn-primary w-full">Tambah Login Pengurus</button>
+          </ActionForm>
+        </div>
+
+        <div className="card p-5">
+          <h2 className="text-base font-bold text-ink">Daftar Login Pengurus</h2>
+          <p className="mt-1 text-xs text-ink-soft">Akun aktif yang dapat masuk ke panel admin.</p>
+          <div className="mt-4 divide-y divide-black/5 rounded-2xl border border-black/5">
+            {admins.map((a) => (
+              <div key={a.id} className="flex items-start justify-between gap-3 p-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">{a.name}</p>
+                  <p className="text-xs text-ink-faint">@{a.username}</p>
+                </div>
+                <div className="text-right text-[11px] text-ink-faint">
+                  <p className="font-semibold uppercase">{a.role}</p>
+                  <p>{formatDate(a.createdAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

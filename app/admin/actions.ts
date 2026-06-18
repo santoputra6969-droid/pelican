@@ -58,6 +58,46 @@ export async function adminLogout() {
   redirect("/admin/login");
 }
 
+export async function createAdminAccount(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+
+  const usernameRaw = String(formData.get("username") ?? "").trim();
+  const username = usernameRaw.toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!username || !name || !password) {
+    return { ok: false, message: "Nama, username, dan kata sandi wajib diisi." };
+  }
+  if (!/^[a-z0-9._-]{3,30}$/i.test(username)) {
+    return {
+      ok: false,
+      message: "Username hanya boleh huruf, angka, titik, underscore, dan strip (3-30 karakter).",
+    };
+  }
+  if (password.length < 6) {
+    return { ok: false, message: "Kata sandi minimal 6 karakter." };
+  }
+
+  const exists = await prisma.admin.findUnique({ where: { username } });
+  if (exists) {
+    return { ok: false, message: "Username sudah digunakan." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.admin.create({
+    data: {
+      username,
+      name,
+      passwordHash,
+      role: "admin",
+    },
+  });
+
+  revalidatePath("/admin/pengaturan");
+  return { ok: true, message: `Akun pengurus ${username} berhasil ditambahkan.` };
+}
+
 /* --------------------------------- IPL ---------------------------------- */
 
 export async function setIplAmount(formData: FormData): Promise<ActionResult> {
@@ -184,7 +224,9 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
       ? `[TEST] ${rawNotes.replace(/^\[TEST\]\s*/i, "")}`
       : "[TEST]"
     : rawNotes || null;
-  const author = String(formData.get("author") ?? "").trim() || admin.username;
+  const author = String(formData.get("author") ?? "").trim();
+  const actor = admin.username;
+  const createdBy = author && author !== actor ? `${actor} (${author})` : actor;
   const amount = Math.round(Number(formData.get("amount") ?? 0));
 
   if (!type || !Number.isFinite(amount) || amount <= 0)
@@ -208,7 +250,7 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
         amount,
         mutation,
         image: image?.ok ? image.id : null,
-        createdBy: author,
+        createdBy,
       },
     });
 
@@ -221,12 +263,12 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
             ? {
                 balancePkk: { increment: delta },
                 lastTxId: String(trx.id),
-                updatedBy: author,
+                updatedBy: actor,
               }
             : {
                 balance: { increment: delta },
                 lastTxId: String(trx.id),
-                updatedBy: author,
+                updatedBy: actor,
               },
       });
     }
