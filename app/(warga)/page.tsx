@@ -72,16 +72,25 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/informasi"
-            aria-label="Informasi"
-            className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 transition active:scale-90"
-          >
-            <Icon name="bell" size={22} />
-            {infos.length > 0 && (
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-pelican-600" />
-            )}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/login"
+              aria-label="Login Admin"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 transition active:scale-90"
+            >
+              <Icon name="shield" size={21} />
+            </Link>
+            <Link
+              href="/informasi"
+              aria-label="Informasi"
+              className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 transition active:scale-90"
+            >
+              <Icon name="bell" size={22} />
+              {infos.length > 0 && (
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-pelican-600" />
+              )}
+            </Link>
+          </div>
         </div>
       </header>
 
