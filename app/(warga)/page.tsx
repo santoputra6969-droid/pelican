@@ -49,7 +49,7 @@ export default async function HomePage() {
       take: 3,
     }),
     prisma.balance.findFirst({ orderBy: { id: "asc" } }),
-    getCommunityFeeStatusForHouse({ feeType: "KAS", houseId: house.id }),
+    getCommunityFeeStatusForHouse({ feeType: "KAS", houseId: house.id, includeAllYears: true }),
     getCommunityFeeStatusForHouse({ feeType: "PKK", houseId: house.id, includeAllYears: true }),
   ]);
 

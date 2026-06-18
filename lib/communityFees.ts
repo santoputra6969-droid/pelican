@@ -60,6 +60,7 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
         ownerName: true,
         cashAmount: true,
         pkkAmount: true,
+        createdAt: true,
       },
       orderBy: [{ block: "asc" }, { no: "asc" }],
     }),
@@ -90,6 +91,25 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
     .filter((y) => Number.isInteger(y));
 
   return { houses, txs, paidByHouse, paidYears };
+}
+
+function resolveStartYear({
+  includeAllYears,
+  fallbackYear,
+  paidYears,
+  houseCreatedAt,
+}: {
+  includeAllYears: boolean;
+  fallbackYear: number;
+  paidYears: number[];
+  houseCreatedAt?: Date;
+}) {
+  if (!includeAllYears) return fallbackYear;
+
+  const years = [fallbackYear];
+  if (paidYears.length > 0) years.push(Math.min(...paidYears));
+  if (houseCreatedAt) years.push(houseCreatedAt.getFullYear());
+  return Math.min(...years);
 }
 
 export async function getCommunityFeeRows({
@@ -132,15 +152,17 @@ export async function getCommunityFeeRows({
   const now = new Date();
   const nowYear = now.getFullYear();
   const targetYear = selectedYear ?? nowYear;
-  const firstYear =
-    includeAllYears && paidYears.length > 0
-      ? Math.min(...paidYears, nowYear)
-      : targetYear;
 
   const limitMonth = (year: number) => (year === nowYear ? now.getMonth() + 1 : 12);
 
   const rows: CommunityRow[] = [];
   for (const h of houses) {
+    const firstYear = resolveStartYear({
+      includeAllYears,
+      fallbackYear: targetYear,
+      paidYears,
+      houseCreatedAt: h.createdAt,
+    });
     const amount = feeType === "KAS" ? (h.cashAmount ?? 20000) : (h.pkkAmount ?? 5000);
     const houseKey = `${h.block.toUpperCase()}::${h.no.toUpperCase()}`;
     const paid = paidByHouse.get(houseKey) ?? new Set<string>();
@@ -198,10 +220,12 @@ export async function getCommunityFeeStatusForHouse({
 
   const now = new Date();
   const nowYear = now.getFullYear();
-  const firstYear =
-    includeAllYears && paidYears.length > 0
-      ? Math.min(...paidYears, nowYear)
-      : nowYear;
+  const firstYear = resolveStartYear({
+    includeAllYears,
+    fallbackYear: nowYear,
+    paidYears,
+    houseCreatedAt: house.createdAt,
+  });
   const limitMonth = (year: number) => (year === nowYear ? now.getMonth() + 1 : 12);
   const paid = paidByHouse.get(`${house.block.toUpperCase()}::${house.no.toUpperCase()}`) ?? new Set<string>();
   const amountPerMonth = feeType === "KAS" ? (house.cashAmount ?? 20000) : (house.pkkAmount ?? 5000);

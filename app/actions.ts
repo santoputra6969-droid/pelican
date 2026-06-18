@@ -295,7 +295,7 @@ export async function createCommunityFeePayment(
   const status = await getCommunityFeeStatusForHouse({
     feeType,
     houseId,
-    includeAllYears: feeType === "PKK",
+    includeAllYears: true,
   });
   if (!status.enabled) {
     return { ok: false, message: `Iuran ${feeType} tidak aktif untuk rumah ini.` };

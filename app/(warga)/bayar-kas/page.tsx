@@ -16,6 +16,7 @@ export default async function BayarKasPage() {
   const status = await getCommunityFeeStatusForHouse({
     feeType: "KAS",
     houseId: house.id,
+    includeAllYears: true,
   });
   const ownerLabel = house.ownerName ?? `Blok ${house.block} / No. ${house.no}`;
 
