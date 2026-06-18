@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { createAdminAccount, setCommunityFeeConfig } from "@/app/admin/actions";
+import {
+  createAdminAccount,
+  resetAdminPassword,
+  setCommunityFeeConfig,
+  toggleAdminAccess,
+} from "@/app/admin/actions";
 import { formatDate, formatRupiah } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +29,7 @@ function mode(values: number[]) {
 }
 
 export default async function AdminPengaturanPage() {
+  const currentAdmin = await requireAdmin();
   const [houses, admins] = await Promise.all([
     prisma.house.findMany({
     select: {
@@ -149,17 +156,53 @@ export default async function AdminPengaturanPage() {
 
         <div className="card p-5">
           <h2 className="text-base font-bold text-ink">Daftar Login Pengurus</h2>
-          <p className="mt-1 text-xs text-ink-soft">Akun aktif yang dapat masuk ke panel admin.</p>
+          <p className="mt-1 text-xs text-ink-soft">Kelola status aktif akun dan reset kata sandi per pengurus.</p>
+
+          <ActionForm action={resetAdminPassword} className="mt-4 space-y-3 rounded-2xl border border-black/5 p-3">
+            <p className="text-xs font-semibold text-ink-soft">Reset Kata Sandi Pengurus</p>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Akun Pengurus</label>
+              <select name="adminId" className="input" required>
+                <option value="">Pilih akun</option>
+                {admins.map((a) => (
+                  <option key={`reset-${a.id}`} value={a.id}>
+                    @{a.username} - {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Kata Sandi Baru</label>
+              <input name="password" type="password" className="input" required minLength={6} />
+            </div>
+            <button type="submit" className="btn-primary w-full">Reset Kata Sandi</button>
+          </ActionForm>
+
           <div className="mt-4 divide-y divide-black/5 rounded-2xl border border-black/5">
             {admins.map((a) => (
               <div key={a.id} className="flex items-start justify-between gap-3 p-3">
                 <div>
                   <p className="text-sm font-semibold text-ink">{a.name}</p>
-                  <p className="text-xs text-ink-faint">@{a.username}</p>
+                  <p className="text-xs text-ink-faint">@{a.username} {a.id === currentAdmin.id ? "(Anda)" : ""}</p>
                 </div>
                 <div className="text-right text-[11px] text-ink-faint">
-                  <p className="font-semibold uppercase">{a.role}</p>
+                  <p className={`font-semibold uppercase ${a.role === "admin" ? "text-pelican-700" : "text-red-500"}`}>
+                    {a.role === "admin" ? "AKTIF" : "NONAKTIF"}
+                  </p>
                   <p>{formatDate(a.createdAt)}</p>
+                  <ActionForm action={toggleAdminAccess} className="mt-2">
+                    <input type="hidden" name="adminId" value={a.id} />
+                    <button
+                      type="submit"
+                      className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
+                        a.role === "admin"
+                          ? "bg-red-50 text-red-600"
+                          : "bg-pelican-50 text-pelican-700"
+                      }`}
+                    >
+                      {a.role === "admin" ? "Nonaktifkan" : "Aktifkan"}
+                    </button>
+                  </ActionForm>
                 </div>
               </div>
             ))}

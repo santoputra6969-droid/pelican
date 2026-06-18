@@ -14,6 +14,11 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 export async function requireAdmin(): Promise<AdminSession> {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
+  const admin = await prisma.admin.findUnique({
+    where: { id: session.id },
+    select: { id: true, role: true },
+  });
+  if (!admin || admin.role !== "admin") redirect("/admin/login");
   return session;
 }
 

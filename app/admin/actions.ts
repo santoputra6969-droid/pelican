@@ -35,6 +35,9 @@ export async function adminLogin(
 
   const admin = await prisma.admin.findUnique({ where: { username } });
   if (!admin) return { error: "Username atau kata sandi salah." };
+  if (admin.role !== "admin") {
+    return { error: "Akun tidak aktif. Hubungi pengurus utama." };
+  }
 
   const valid = await bcrypt.compare(password, admin.passwordHash);
   if (!valid) return { error: "Username atau kata sandi salah." };
@@ -96,6 +99,57 @@ export async function createAdminAccount(formData: FormData): Promise<ActionResu
 
   revalidatePath("/admin/pengaturan");
   return { ok: true, message: `Akun pengurus ${username} berhasil ditambahkan.` };
+}
+
+export async function resetAdminPassword(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = String(formData.get("adminId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!id || !password) {
+    return { ok: false, message: "Akun pengurus dan kata sandi baru wajib diisi." };
+  }
+  if (password.length < 6) {
+    return { ok: false, message: "Kata sandi baru minimal 6 karakter." };
+  }
+
+  const target = await prisma.admin.findUnique({ where: { id } });
+  if (!target) return { ok: false, message: "Akun pengurus tidak ditemukan." };
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.admin.update({
+    where: { id },
+    data: { passwordHash },
+  });
+
+  revalidatePath("/admin/pengaturan");
+  return { ok: true, message: `Kata sandi @${target.username} berhasil direset.` };
+}
+
+export async function toggleAdminAccess(formData: FormData): Promise<ActionResult> {
+  const actor = await requireAdmin();
+  const id = String(formData.get("adminId") ?? "").trim();
+  if (!id) return { ok: false, message: "Akun pengurus tidak ditemukan." };
+
+  const target = await prisma.admin.findUnique({ where: { id } });
+  if (!target) return { ok: false, message: "Akun pengurus tidak ditemukan." };
+
+  if (target.role === "admin") {
+    if (target.id === actor.id) {
+      return { ok: false, message: "Akun Anda sendiri tidak bisa dinonaktifkan." };
+    }
+    const activeCount = await prisma.admin.count({ where: { role: "admin" } });
+    if (activeCount <= 1) {
+      return { ok: false, message: "Minimal harus ada 1 akun admin aktif." };
+    }
+    await prisma.admin.update({ where: { id }, data: { role: "disabled" } });
+    revalidatePath("/admin/pengaturan");
+    return { ok: true, message: `Akun @${target.username} dinonaktifkan.` };
+  }
+
+  await prisma.admin.update({ where: { id }, data: { role: "admin" } });
+  revalidatePath("/admin/pengaturan");
+  return { ok: true, message: `Akun @${target.username} diaktifkan kembali.` };
 }
 
 /* --------------------------------- IPL ---------------------------------- */
