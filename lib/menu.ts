@@ -22,6 +22,8 @@ export const mainMenu: MenuItem[] = [
 
 export const allMenu: MenuItem[] = [
   ...mainMenu.slice(0, 7),
+  { id: "a00", label: "Bayar Kas", icon: "wallet", href: "/bayar-kas", accent: "#0ea5e9" },
+  { id: "a01", label: "Bayar PKK", icon: "heart", href: "/bayar-pkk", accent: "#ec4899" },
   { id: "a0", label: "Pengkinian Data", icon: "user-edit", href: "/resident/form", accent: "#0ea5e9" },
   { id: "a1", label: "Kontribusi", icon: "heart", href: "/kontribusi", accent: "#e11d48" },
   { id: "a2", label: "Fasilitas Umum", icon: "park", href: "/menu", accent: "#22c55e" },

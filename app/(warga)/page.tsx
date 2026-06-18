@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
 import { getSelectedHouse } from "@/lib/session";
 import { formatDate, formatPeriod, formatRupiah } from "@/lib/format";
+import { getCommunityFeeStatusForHouse } from "@/lib/communityFees";
 import { mainMenu } from "@/lib/menu";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function HomePage() {
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth() + 1;
 
-  const [unpaidBills, banners, infos, balance] = await Promise.all([
+  const [unpaidBills, banners, infos, balance, cashStatus, pkkStatus] = await Promise.all([
     prisma.bill.findMany({
       where: {
         houseId: house.id,
@@ -48,6 +49,8 @@ export default async function HomePage() {
       take: 3,
     }),
     prisma.balance.findFirst({ orderBy: { id: "asc" } }),
+    getCommunityFeeStatusForHouse({ feeType: "KAS", houseId: house.id }),
+    getCommunityFeeStatusForHouse({ feeType: "PKK", houseId: house.id, includeAllYears: true }),
   ]);
 
   const totalDue = unpaidBills.reduce((s, b) => s + b.amount, 0);
@@ -118,6 +121,34 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {(cashStatus.enabled || pkkStatus.enabled) && (
+        <section className="mt-4 px-5">
+          <div className="card overflow-hidden p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-ink-faint">Iuran Kas & PKK</p>
+                <p className="mt-0.5 text-2xl font-extrabold text-ink">
+                  {formatRupiah(cashStatus.totalDue + pkkStatus.totalDue)}
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-600">
+                {(cashStatus.dueBills.length || 0) + (pkkStatus.dueBills.length || 0)} tagihan
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Link href="/bayar-kas" className="btn-ghost">
+                <Icon name="wallet" size={18} />
+                Bayar Kas
+              </Link>
+              <Link href="/bayar-pkk" className="btn-ghost">
+                <Icon name="heart" size={18} />
+                Bayar PKK
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Tagihan card */}
       <section className="mt-4 px-5">

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { HOUSE_COOKIE } from "@/lib/session";
 import { formatPeriod } from "@/lib/format";
 import { createSnapTransaction } from "@/lib/midtrans";
+import { getCommunityFeeStatusForHouse } from "@/lib/communityFees";
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -271,6 +272,97 @@ export async function createPayment(
         err instanceof Error
           ? err.message
           : "Gagal membuat pembayaran. Coba lagi.",
+    };
+  }
+}
+
+export async function createCommunityFeePayment(
+  _prev: CreatePaymentResult,
+  formData: FormData
+): Promise<CreatePaymentResult> {
+  const rawFeeType = String(formData.get("feeType") ?? "").toUpperCase();
+  const feeType = rawFeeType === "PKK" ? "PKK" : rawFeeType === "KAS" ? "KAS" : null;
+
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+  if (!houseId || !feeType) {
+    return { ok: false, message: "Sesi atau jenis iuran tidak valid." };
+  }
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+  if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
+
+  const status = await getCommunityFeeStatusForHouse({
+    feeType,
+    houseId,
+    includeAllYears: feeType === "PKK",
+  });
+  if (!status.enabled) {
+    return { ok: false, message: `Iuran ${feeType} tidak aktif untuk rumah ini.` };
+  }
+  if (status.dueBills.length === 0) {
+    return { ok: false, message: `Tidak ada tunggakan ${feeType.toLowerCase()} untuk dibayar.` };
+  }
+
+  const total = status.totalDue;
+  const orderId = `${feeType}-${houseId}-${Date.now()}-${Math.floor(
+    Math.random() * 1000
+  )
+    .toString()
+    .padStart(3, "0")}`;
+  const refs = status.dueBills.map(
+    (bill) => `C${feeType}-${bill.year}-${String(bill.month).padStart(2, "0")}`
+  );
+  const items = status.dueBills.map((bill) => ({
+    id: `${feeType}-${bill.year}${String(bill.month).padStart(2, "0")}`,
+    price: bill.amount,
+    quantity: 1,
+    name: `${feeType} ${formatPeriod(bill.year, bill.month)}`.slice(0, 50),
+  }));
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ?? "";
+
+  try {
+    await prisma.payment.create({
+      data: {
+        orderId,
+        houseId,
+        billIds: refs.join(","),
+        amount: total,
+        status: "PENDING",
+        createdBy: house.ownerName ?? `Blok ${house.block} No ${house.no}`,
+      },
+    });
+
+    const snap = await createSnapTransaction({
+      orderId,
+      grossAmount: total,
+      items,
+      customer: {
+        first_name: house.ownerName ?? `Blok ${house.block}`,
+        last_name: `No ${house.no}`,
+      },
+      finishRedirectUrl: baseUrl
+        ? `${baseUrl}/bayar-ipl/selesai?order_id=${orderId}`
+        : undefined,
+      notificationUrl: baseUrl
+        ? `${baseUrl}/api/midtrans/notification`
+        : undefined,
+    });
+
+    await prisma.payment.update({
+      where: { orderId },
+      data: { snapToken: snap.token },
+    });
+
+    return { ok: true, token: snap.token, orderId, amount: total };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : `Gagal membuat pembayaran ${feeType}. Coba lagi.`,
     };
   }
 }

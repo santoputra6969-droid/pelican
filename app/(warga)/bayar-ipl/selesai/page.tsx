@@ -6,6 +6,17 @@ import { formatRupiah } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+function paymentKind(payment: { orderId: string; billIds: string } | null) {
+  const refs = payment?.billIds ?? "";
+  if (refs.includes("CPKK-")) {
+    return { label: "PKK", retryHref: "/bayar-pkk" };
+  }
+  if (refs.includes("CKAS-")) {
+    return { label: "Kas", retryHref: "/bayar-kas" };
+  }
+  return { label: "IPL", retryHref: "/bayar-ipl" };
+}
+
 export default async function BayarSelesaiPage({
   searchParams,
 }: {
@@ -15,6 +26,7 @@ export default async function BayarSelesaiPage({
   const payment = order_id
     ? await prisma.payment.findUnique({ where: { orderId: order_id } })
     : null;
+  const kind = paymentKind(payment);
 
   const status = payment?.status ?? "UNKNOWN";
   const pending = status === "PENDING";
@@ -26,7 +38,7 @@ export default async function BayarSelesaiPage({
           icon: "check" as const,
           tone: "bg-pelican-100 text-pelican-600",
           title: "Pembayaran Berhasil",
-          desc: `Pembayaran IPL sebesar ${formatRupiah(
+          desc: `Pembayaran ${kind.label} sebesar ${formatRupiah(
             payment?.amount ?? 0
           )} telah kami terima. Terima kasih!`,
         };
@@ -90,7 +102,7 @@ export default async function BayarSelesaiPage({
           status === "CANCEL" ||
           status === "FAILED" ||
           status === "UNKNOWN") && (
-          <Link href="/bayar-ipl" className="btn-primary w-full">
+          <Link href={kind.retryHref} className="btn-primary w-full">
             Coba Bayar Lagi
           </Link>
         )}

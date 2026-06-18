@@ -12,10 +12,12 @@ export type CommunityRow = {
   bills: { year: number; month: number; amount: number }[];
 };
 
+export type CommunityFeeBill = { year: number; month: number; amount: number };
+
 const NOTE_HOUSE_RE = /(?:PEMBAYARAN\s+(?:KAS|PKK)\s+)([A-Z0-9-]+)\s+No\s+([^\s,.]+)/i;
 const NOTE_PERIOD_RE = /bulan\s+(\d{1,2})(?:\s+dan)?\s+tahun\s+(\d{4})/gi;
 
-function parseHouseKey(notes: string | null | undefined) {
+export function parseCommunityHouseKey(notes: string | null | undefined) {
   if (!notes) return null;
   const m = notes.match(NOTE_HOUSE_RE);
   if (!m) return null;
@@ -25,7 +27,7 @@ function parseHouseKey(notes: string | null | undefined) {
   return `${block}::${no}`;
 }
 
-function parsePeriods(notes: string | null | undefined) {
+export function parseCommunityPeriods(notes: string | null | undefined) {
   if (!notes) return [] as { year: number; month: number }[];
   const out: { year: number; month: number }[] = [];
   NOTE_PERIOD_RE.lastIndex = 0;
@@ -40,8 +42,54 @@ function parsePeriods(notes: string | null | undefined) {
   return out;
 }
 
-function toKey(year: number, month: number) {
+export function communityPeriodKey(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
+  const [houses, txs] = await Promise.all([
+    prisma.house.findMany({
+      where:
+        feeType === "KAS"
+          ? { payCash: true, cashAmount: { not: null } }
+          : { payPkk: true, pkkAmount: { not: null } },
+      select: {
+        id: true,
+        block: true,
+        no: true,
+        ownerName: true,
+        cashAmount: true,
+        pkkAmount: true,
+      },
+      orderBy: [{ block: "asc" }, { no: "asc" }],
+    }),
+    prisma.transaction.findMany({
+      where: {
+        mutation: "DEBIT",
+        type: { equals: feeType, mode: "insensitive" },
+      },
+      select: { notes: true },
+      take: 10000,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const paidByHouse = new Map<string, Set<string>>();
+  for (const tx of txs) {
+    const houseKey = parseCommunityHouseKey(tx.notes);
+    if (!houseKey) continue;
+    const periods = parseCommunityPeriods(tx.notes);
+    if (periods.length === 0) continue;
+    if (!paidByHouse.has(houseKey)) paidByHouse.set(houseKey, new Set<string>());
+    const set = paidByHouse.get(houseKey)!;
+    for (const p of periods) set.add(communityPeriodKey(p.year, p.month));
+  }
+
+  const paidYears = txs
+    .flatMap((tx) => parseCommunityPeriods(tx.notes).map((p) => p.year))
+    .filter((y) => Number.isInteger(y));
+
+  return { houses, txs, paidByHouse, paidYears };
 }
 
 export async function getCommunityFeeRows({
@@ -62,19 +110,8 @@ export async function getCommunityFeeRows({
       : { payPkk: true, pkkAmount: { not: null } }),
   };
 
-  const [houses, blocks, txs] = await Promise.all([
-    prisma.house.findMany({
-      where: houseWhere,
-      select: {
-        id: true,
-        block: true,
-        no: true,
-        ownerName: true,
-        cashAmount: true,
-        pkkAmount: true,
-      },
-      orderBy: [{ block: "asc" }, { no: "asc" }],
-    }),
+  const [{ houses: allHouses, txs, paidByHouse, paidYears }, blocks] = await Promise.all([
+    getCommunityFeeSnapshot(feeType),
     prisma.house.findMany({
       where:
         feeType === "KAS"
@@ -84,31 +121,13 @@ export async function getCommunityFeeRows({
       select: { block: true },
       orderBy: { block: "asc" },
     }),
-    prisma.transaction.findMany({
-      where: {
-        mutation: "DEBIT",
-        type: { equals: feeType, mode: "insensitive" },
-      },
-      select: { notes: true },
-      take: 10000,
-      orderBy: { createdAt: "desc" },
-    }),
   ]);
-
-  const paidByHouse = new Map<string, Set<string>>();
-  for (const tx of txs) {
-    const houseKey = parseHouseKey(tx.notes);
-    if (!houseKey) continue;
-    const periods = parsePeriods(tx.notes);
-    if (periods.length === 0) continue;
-    if (!paidByHouse.has(houseKey)) paidByHouse.set(houseKey, new Set<string>());
-    const set = paidByHouse.get(houseKey)!;
-    for (const p of periods) set.add(toKey(p.year, p.month));
-  }
-
-  const paidYears = txs
-    .flatMap((tx) => parsePeriods(tx.notes).map((p) => p.year))
-    .filter((y) => Number.isInteger(y));
+  const houses = allHouses.filter((h) => {
+    if (selectedBlock !== "SEMUA" && h.block !== selectedBlock) return false;
+    return feeType === "KAS"
+      ? h.cashAmount !== null
+      : h.pkkAmount !== null;
+  });
 
   const now = new Date();
   const nowYear = now.getFullYear();
@@ -126,10 +145,10 @@ export async function getCommunityFeeRows({
     const houseKey = `${h.block.toUpperCase()}::${h.no.toUpperCase()}`;
     const paid = paidByHouse.get(houseKey) ?? new Set<string>();
 
-    const bills: { year: number; month: number; amount: number }[] = [];
+    const bills: CommunityFeeBill[] = [];
     for (let year = firstYear; year <= targetYear; year += 1) {
       for (let month = 1; month <= limitMonth(year); month += 1) {
-        const k = toKey(year, month);
+        const k = communityPeriodKey(year, month);
         if (!paid.has(k)) bills.push({ year, month, amount });
       }
     }
@@ -150,5 +169,65 @@ export async function getCommunityFeeRows({
     rows,
     blocks: blocks.map((b) => b.block),
     totalPiutang: rows.reduce((s, r) => s + r.total, 0),
+  };
+}
+
+export async function getCommunityFeeStatusForHouse({
+  feeType,
+  houseId,
+  includeAllYears = false,
+}: {
+  feeType: CommunityFeeType;
+  houseId: number;
+  includeAllYears?: boolean;
+}) {
+  const { houses, paidByHouse, paidYears } = await getCommunityFeeSnapshot(feeType);
+  const house = houses.find((entry) => entry.id === houseId);
+  if (!house) {
+    return {
+      enabled: false,
+      ownerName: null,
+      block: null,
+      no: null,
+      amountPerMonth: 0,
+      dueBills: [] as CommunityFeeBill[],
+      paidBills: [] as CommunityFeeBill[],
+      totalDue: 0,
+    };
+  }
+
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const firstYear =
+    includeAllYears && paidYears.length > 0
+      ? Math.min(...paidYears, nowYear)
+      : nowYear;
+  const limitMonth = (year: number) => (year === nowYear ? now.getMonth() + 1 : 12);
+  const paid = paidByHouse.get(`${house.block.toUpperCase()}::${house.no.toUpperCase()}`) ?? new Set<string>();
+  const amountPerMonth = feeType === "KAS" ? (house.cashAmount ?? 20000) : (house.pkkAmount ?? 5000);
+  const dueBills: CommunityFeeBill[] = [];
+  const paidBills: CommunityFeeBill[] = [];
+
+  for (let year = firstYear; year <= nowYear; year += 1) {
+    for (let month = 1; month <= limitMonth(year); month += 1) {
+      const key = communityPeriodKey(year, month);
+      const item = { year, month, amount: amountPerMonth };
+      if (paid.has(key)) {
+        paidBills.push(item);
+      } else {
+        dueBills.push(item);
+      }
+    }
+  }
+
+  return {
+    enabled: true,
+    ownerName: house.ownerName,
+    block: house.block,
+    no: house.no,
+    amountPerMonth,
+    dueBills,
+    paidBills: paidBills.sort((a, b) => (a.year === b.year ? b.month - a.month : b.year - a.year)),
+    totalDue: dueBills.reduce((sum, bill) => sum + bill.amount, 0),
   };
 }
