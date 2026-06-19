@@ -215,6 +215,81 @@ body {
     font-size: 16px !important;
   }
 
+  .print-journal-summary {
+    margin-top: 8px;
+    color: #111827;
+  }
+
+  .print-journal-summary__title {
+    margin: 0;
+    text-align: center;
+    font-size: 38px;
+    line-height: 1.15;
+    font-weight: 500;
+  }
+
+  .print-journal-summary__subtitle {
+    margin: 3px 0 12px;
+    text-align: center;
+    font-size: 31px;
+    line-height: 1.2;
+    font-weight: 400;
+  }
+
+  .print-journal-summary__section {
+    margin: 10px 0 6px;
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 800;
+  }
+
+  .print-journal-summary__table,
+  .print-journal-summary__category-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .print-journal-summary__table td {
+    padding: 5px 8px;
+    font-size: 26px;
+    line-height: 1.25;
+    vertical-align: top;
+  }
+
+  .print-journal-summary__table td:first-child {
+    width: 65%;
+    font-weight: 600;
+  }
+
+  .print-journal-summary__table td:last-child {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .print-journal-summary__spacer {
+    height: 12px;
+    padding: 0 !important;
+  }
+
+  .print-journal-summary__category-table th,
+  .print-journal-summary__category-table td {
+    padding: 6px 8px;
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .print-journal-summary__category-table th {
+    background: #e5e7eb !important;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .print-journal-summary__category-table th:nth-child(n + 2),
+  .print-journal-summary__category-table td:nth-child(n + 2) {
+    text-align: right;
+  }
+
   .print-table-wrap {
     page-break-inside: auto;
     overflow: visible !important;

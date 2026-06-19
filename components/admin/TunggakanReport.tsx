@@ -180,7 +180,17 @@ export function TunggakanReport({
 
     const foot = useRincianBulan
       ? [["TOTAL", `${selectedRows.length} rumah`, `${totalMonths} bulan`, ""]]
-      : [["TOTAL", "", "", `${totalMonths} bulan`, formatRupiah(selectedTotal)], ["TOTAL NETT (-0.7%)", "", "", "", formatRupiah(totalNett)]];
+      : [
+          [
+            { content: "TOTAL", colSpan: 3 },
+            `${totalMonths} bulan`,
+            formatRupiah(selectedTotal),
+          ],
+          [
+            { content: "TOTAL NETT (-0.7%)", colSpan: 4 },
+            formatRupiah(totalNett),
+          ],
+        ];
 
     autoTable(doc, {
       startY: currentY + 6,
@@ -188,6 +198,8 @@ export function TunggakanReport({
       body,
       foot,
       theme: "grid",
+      showHead: useRincianBulan ? "everyPage" : "firstPage",
+      showFoot: useRincianBulan ? "lastPage" : "lastPage",
       styles: {
         font: "helvetica",
         fontSize: 9,
@@ -210,8 +222,14 @@ export function TunggakanReport({
         if (!useRincianBulan && data.section === "foot" && data.row.index === 1) {
           data.cell.styles.fillColor = [134, 239, 172];
         }
+        if (data.section === "foot" && data.row.index === 0 && data.column.index === 0) {
+          data.cell.styles.halign = "left";
+        }
+        if (!useRincianBulan && data.section === "foot" && data.row.index === 1 && data.column.index === 0) {
+          data.cell.styles.halign = "left";
+        }
         if (data.section !== "head") {
-          if (data.column.index === 0) data.cell.styles.halign = "center";
+          if (data.section === "body" && data.column.index === 0) data.cell.styles.halign = "center";
           if (!useRincianBulan && data.column.index === 4) data.cell.styles.halign = "right";
         }
       },

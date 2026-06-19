@@ -44,6 +44,14 @@ export function TransaksiJournalReport({
   const net = totalMasuk - totalKeluar;
   const years = Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - i);
 
+  const formatPrintCurrency = (value: number) => {
+    const isInteger = Number.isInteger(value);
+    return new Intl.NumberFormat("id-ID", {
+      minimumFractionDigits: isInteger ? 0 : 2,
+      maximumFractionDigits: isInteger ? 0 : 2,
+    }).format(value);
+  };
+
   function exportExcel() {
     const header = ["Tanggal", "Masuk", "Keluar"];
     const rows = daily.map((row) => [row.label, row.masuk, row.keluar].join(";"));
@@ -143,7 +151,7 @@ export function TransaksiJournalReport({
         </p>
       </section>
 
-      <section className="card overflow-hidden">
+      <section className="card overflow-hidden print:hidden">
         <div className="bg-black/[0.03] px-4 py-3">
           <h3 className="text-lg font-bold text-ink">Ringkasan Keuangan</h3>
         </div>
@@ -157,7 +165,7 @@ export function TransaksiJournalReport({
         </div>
       </section>
 
-      <section className="card p-4">
+      <section className="card p-4 print:hidden">
         <h3 className="text-lg font-bold text-ink">Grafik Transaksi</h3>
         <p className="mt-3 text-base font-semibold text-ink">Tren Uang Masuk & Keluar (Per Hari)</p>
         <div className="mt-3">
@@ -170,7 +178,7 @@ export function TransaksiJournalReport({
         </div>
       </section>
 
-      <section className="card overflow-hidden">
+      <section className="card overflow-hidden print:hidden">
         <div className="bg-black/[0.03] px-4 py-3">
           <h3 className="text-lg font-bold text-ink">Ringkasan Per Kategori</h3>
         </div>
@@ -202,6 +210,66 @@ export function TransaksiJournalReport({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="print-only print-journal-summary">
+        <p className="print-journal-summary__title">Laporan Keuangan Cluster Puri Pelican</p>
+        <p className="print-journal-summary__subtitle">Periode Bulan {monthLabel} Tahun {year}</p>
+
+        <h3 className="print-journal-summary__section">RINGKASAN KEUANGAN</h3>
+        <table className="print-journal-summary__table">
+          <tbody>
+            <tr>
+              <td>Total Uang Masuk</td>
+              <td>Rp {formatPrintCurrency(totalMasuk)}</td>
+            </tr>
+            <tr>
+              <td>Total Uang Keluar</td>
+              <td>Rp {formatPrintCurrency(totalKeluar)}</td>
+            </tr>
+            <tr>
+              <td>Selisih (Net)</td>
+              <td>Rp {formatPrintCurrency(net)}</td>
+            </tr>
+            <tr>
+              <td colSpan={2} className="print-journal-summary__spacer" />
+            </tr>
+            <tr>
+              <td>Total Transaksi</td>
+              <td>{totalCount} transaksi</td>
+            </tr>
+            <tr>
+              <td>Rata-rata Uang Masuk</td>
+              <td>Rp {formatPrintCurrency(avgMasuk)}</td>
+            </tr>
+            <tr>
+              <td>Rata-rata Uang Keluar</td>
+              <td>Rp {formatPrintCurrency(avgKeluar)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 className="print-journal-summary__section">RINGKASAN PER KATEGORI</h3>
+        <table className="print-journal-summary__category-table">
+          <thead>
+            <tr>
+              <th>Kategori</th>
+              <th>Masuk</th>
+              <th>Keluar</th>
+              <th>Jumlah Transaksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categorySummary.map((row) => (
+              <tr key={`print-${row.name}`}>
+                <td>{row.name}</td>
+                <td>Rp {formatPrintCurrency(row.masuk)}</td>
+                <td>Rp {formatPrintCurrency(row.keluar)}</td>
+                <td>{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </div>
   );
