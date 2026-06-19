@@ -4,6 +4,7 @@ import { AddTransaksiForm } from "@/components/admin/AddTransaksiForm";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
 import { Icon } from "@/components/Icon";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,15 @@ export default async function AdminTransaksiPage({
       <AdminPageHeader
         title="Jurnal Kas"
         subtitle="Seluruh transaksi pemasukan & pengeluaran cluster"
-        action={<AddTransaksiForm />}
+        action={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link href="/admin/transaksi/report" className="btn-ghost w-full sm:w-auto">
+              <Icon name="history" size={18} />
+              Laporan Bulanan
+            </Link>
+            <AddTransaksiForm />
+          </div>
+        }
       />
 
       <form method="GET" className="card mb-4 space-y-3 p-4 print:hidden">
