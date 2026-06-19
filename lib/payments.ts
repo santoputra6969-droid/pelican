@@ -2,6 +2,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { formatPeriod } from "@/lib/format";
 
+const MIDTRANS_FEE_RATE = 0.007;
+
+function calculateMidtransFee(amount: number): number {
+  return Math.round(amount * MIDTRANS_FEE_RATE);
+}
+
 /**
  * Settle pembayaran Midtrans untuk sebuah orderId.
  * Idempoten: bila Payment sudah PAID, tidak melakukan apa-apa.
@@ -71,14 +77,17 @@ export async function settlePayment(
 
     let totalUtama = 0;
     let totalPkk = 0;
+    let totalFeeUtama = 0;
+    let totalFeePkk = 0;
     let lastTxId = "";
     for (const bill of unpaid) {
       const notes = `PEMBAYARAN IPL ${house.block} No ${house.no} Untuk bulan ${bill.month} dan tahun ${bill.year}.`;
+      const idSettlement = `${orderId}-${bill.id}`;
       const trx = await tx.transaction.create({
         data: {
           category: "UTAMA",
           type: "IPL",
-          idSettlement: `${orderId}-${bill.id}`,
+          idSettlement,
           notes,
           amount: bill.amount,
           mutation: "DEBIT",
@@ -89,6 +98,21 @@ export async function settlePayment(
         where: { id: bill.id },
         data: { status: "PAID", transactionId: trx.id, updatedBy: actor },
       });
+      const feeAmount = calculateMidtransFee(bill.amount);
+      if (feeAmount > 0) {
+        await tx.transaction.create({
+          data: {
+            category: "UTAMA",
+            type: "IPL",
+            idSettlement,
+            notes: `FEE - ${notes}`,
+            amount: feeAmount,
+            mutation: "KREDIT",
+            createdBy: actor,
+          },
+        });
+        totalFeeUtama += feeAmount;
+      }
       totalUtama += bill.amount;
       lastTxId = String(trx.id);
     }
@@ -108,11 +132,12 @@ export async function settlePayment(
 
       const amount = existing?.amount ?? house.iplAmount;
       const notes = `PEMBAYARAN IPL TITIPAN ${house.block} No ${house.no} Untuk bulan ${adv.month} dan tahun ${adv.year}.`;
+      const idSettlement = `${orderId}-ADV-${adv.year}${String(adv.month).padStart(2, "0")}`;
       const trx = await tx.transaction.create({
         data: {
           category: "UTAMA",
           type: "IPL",
-          idSettlement: `${orderId}-ADV-${adv.year}${String(adv.month).padStart(2, "0")}`,
+          idSettlement,
           notes,
           amount,
           mutation: "DEBIT",
@@ -140,6 +165,22 @@ export async function settlePayment(
         });
       }
 
+      const feeAmount = calculateMidtransFee(amount);
+      if (feeAmount > 0) {
+        await tx.transaction.create({
+          data: {
+            category: "UTAMA",
+            type: "IPL",
+            idSettlement,
+            notes: `FEE - ${notes}`,
+            amount: feeAmount,
+            mutation: "KREDIT",
+            createdBy: actor,
+          },
+        });
+        totalFeeUtama += feeAmount;
+      }
+
       totalUtama += amount;
       lastTxId = String(trx.id);
     }
@@ -150,17 +191,38 @@ export async function settlePayment(
           ? house.cashAmount ?? 20000
           : house.pkkAmount ?? 5000;
       const notes = `PEMBAYARAN ${item.feeType} ${house.block} No ${house.no} Untuk bulan ${item.month} dan tahun ${item.year}.`;
+      const idSettlement = `${orderId}-${item.feeType}-${item.year}${String(item.month).padStart(2, "0")}`;
       const trx = await tx.transaction.create({
         data: {
           category: item.feeType === "PKK" ? "PKK" : "UTAMA",
           type: item.feeType,
-          idSettlement: `${orderId}-${item.feeType}-${item.year}${String(item.month).padStart(2, "0")}`,
+          idSettlement,
           notes,
           amount,
           mutation: "DEBIT",
           createdBy: actor,
         },
       });
+
+      const feeAmount = calculateMidtransFee(amount);
+      if (feeAmount > 0) {
+        await tx.transaction.create({
+          data: {
+            category: item.feeType === "PKK" ? "PKK" : "UTAMA",
+            type: item.feeType,
+            idSettlement,
+            notes: `FEE - ${notes}`,
+            amount: feeAmount,
+            mutation: "KREDIT",
+            createdBy: actor,
+          },
+        });
+        if (item.feeType === "PKK") {
+          totalFeePkk += feeAmount;
+        } else {
+          totalFeeUtama += feeAmount;
+        }
+      }
 
       if (item.feeType === "PKK") {
         totalPkk += amount;
@@ -170,14 +232,18 @@ export async function settlePayment(
       lastTxId = String(trx.id);
     }
 
-    if (totalUtama > 0 || totalPkk > 0) {
+    if (totalUtama > 0 || totalPkk > 0 || totalFeeUtama > 0 || totalFeePkk > 0) {
       const bal = await tx.balance.findFirst({ orderBy: { id: "asc" } });
       if (bal) {
         await tx.balance.update({
           where: { id: bal.id },
           data: {
-            ...(totalUtama > 0 ? { balance: { increment: totalUtama } } : {}),
-            ...(totalPkk > 0 ? { balancePkk: { increment: totalPkk } } : {}),
+            ...(totalUtama - totalFeeUtama !== 0
+              ? { balance: { increment: totalUtama - totalFeeUtama } }
+              : {}),
+            ...(totalPkk - totalFeePkk !== 0
+              ? { balancePkk: { increment: totalPkk - totalFeePkk } }
+              : {}),
             lastTxId,
             updatedBy: actor,
           },
@@ -189,6 +255,7 @@ export async function settlePayment(
       where: { id: payment.id },
       data: {
         status: "PAID",
+        fee: totalFeeUtama + totalFeePkk,
         paymentType: info?.paymentType ?? payment.paymentType,
         settledAt: new Date(),
       },

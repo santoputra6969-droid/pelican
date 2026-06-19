@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MONTHS, formatDate, formatPeriod, formatRupiah } from "@/lib/format";
-import { printWithIOSClass } from "@/lib/printUtils";
 
 type Bucket = "IPL" | "KAS" | "PKK" | "LAINNYA";
 
@@ -31,6 +30,7 @@ type DetailItem = {
   amount: number;
   fee: number;
   bucket: Bucket;
+  rawDate: string;
 };
 
 export function BukuKasReport({
@@ -57,8 +57,151 @@ export function BukuKasReport({
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
   const saldoAkhir = saldoAwal + totalMasuk - totalKeluar;
 
-  function printPdf() {
-    printWithIOSClass();
+  async function printPdf() {
+    if (typeof window === "undefined") return;
+
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 28;
+    const kopDataUrl = await loadKopDataUrl(window.location.origin);
+
+    const drawHeader = (title: string, subtitle?: string) => {
+      let headerY = 24;
+      if (kopDataUrl) {
+        const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+        doc.addImage(kopDataUrl, imageType, marginX, headerY, pageWidth - marginX * 2, 58);
+        headerY += 70;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(title, pageWidth / 2, headerY, { align: "center" });
+      headerY += 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      if (subtitle) {
+        doc.text(subtitle, pageWidth / 2, headerY, { align: "center" });
+        headerY += 14;
+      }
+      doc.text(`Dicetak pada: ${formatDateTimeLong(new Date())}`, pageWidth / 2, headerY, {
+        align: "center",
+      });
+      return headerY + 18;
+    };
+
+    let cursorY = drawHeader(
+      "Buku Kas Bulanan Cluster Puri Pelican",
+      `Periode Bulan ${formatPeriod(year, month)}`
+    );
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("RINGKASAN", marginX, cursorY);
+    cursorY += 8;
+
+    autoTable(doc, {
+      startY: cursorY,
+      margin: { left: marginX, right: marginX },
+      theme: "grid",
+      headStyles: { fillColor: [52, 152, 219], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 4 },
+      head: [["Kategori", "Jumlah Trx", "Total Bruto", "Fee (0.7%)", "Total Bersih"]],
+      body: [
+        summaryPdfRow("IPL", report.summary.IPL),
+        summaryPdfRow("Kas", report.summary.KAS),
+        summaryPdfRow("PKK", report.summary.PKK),
+        [
+          "Lainnya",
+          String(report.summary.LAINNYA.count),
+          formatCurrencyCell(report.summary.LAINNYA.masuk),
+          formatCurrencyCell(report.summary.LAINNYA.keluar),
+          formatCurrencyCell(report.summary.LAINNYA.masuk - report.summary.LAINNYA.keluar),
+        ],
+      ],
+    });
+
+    autoTable(doc, {
+      startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
+        ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 18)
+        : cursorY + 140,
+      margin: { left: marginX, right: marginX },
+      theme: "grid",
+      headStyles: { fillColor: [76, 175, 80], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 4 },
+      head: [["TOTAL KESELURUHAN", "UTAMA", "PKK", "TOTAL"]],
+      body: [
+        ["Pemasukan", formatCurrencyCell(report.totals.masukUtama), formatCurrencyCell(report.totals.masukPkk), formatCurrencyCell(report.totals.masuk)],
+        ["Pengeluaran", formatCurrencyCell(report.totals.keluarUtama), formatCurrencyCell(report.totals.keluarPkk), formatCurrencyCell(report.totals.keluar)],
+        ["Saldo Bersih", formatCurrencyCell(report.totals.masukUtama - report.totals.keluarUtama), formatCurrencyCell(report.totals.masukPkk - report.totals.keluarPkk), formatCurrencyCell(report.totals.net)],
+      ],
+    });
+
+    const detailSections: Array<{ title: string; rows: DetailItem[] }> = [
+      { title: `DETAIL PEMBAYARAN IPL (${report.detailRowsByBucket.IPL.length} Transaksi)`, rows: report.detailRowsByBucket.IPL },
+      { title: `DETAIL PEMBAYARAN KAS (${report.detailRowsByBucket.KAS.length} Transaksi)`, rows: report.detailRowsByBucket.KAS },
+      { title: `DETAIL PEMBAYARAN PKK (${report.detailRowsByBucket.PKK.length} Transaksi)`, rows: report.detailRowsByBucket.PKK },
+    ];
+
+    for (const section of detailSections) {
+      doc.addPage();
+      const sectionStartY = drawHeader(section.title, `Periode Bulan ${formatPeriod(year, month)}`);
+      autoTable(doc, {
+        startY: sectionStartY,
+        margin: { left: marginX, right: marginX },
+        theme: "grid",
+        headStyles: { fillColor: [52, 152, 219], fontSize: 8 },
+        styles: { fontSize: 7, cellPadding: 3 },
+        head: [["No", "Blok & No", "Tanggal Bayar", "Bruto", "Fee", "Bersih"]],
+        body: section.rows.map((item, index) => [
+          String(index + 1),
+          item.title,
+          formatDateShort(item.rawDate),
+          formatCurrencyCell(item.amount),
+          formatCurrencyCell(item.fee),
+          formatCurrencyCell(item.amount - item.fee),
+        ]),
+      });
+    }
+
+    if (report.detailRowsByBucket.LAINNYA.length > 0) {
+      doc.addPage();
+      const lainnyaStartY = drawHeader(
+        `DETAIL TRANSAKSI LAINNYA (${report.detailRowsByBucket.LAINNYA.length} Transaksi)`,
+        `Periode Bulan ${formatPeriod(year, month)}`
+      );
+      autoTable(doc, {
+        startY: lainnyaStartY,
+        margin: { left: marginX, right: marginX },
+        theme: "grid",
+        headStyles: { fillColor: [245, 158, 11], fontSize: 8 },
+        styles: { fontSize: 7, cellPadding: 3 },
+        head: [["No", "Jenis", "Tanggal", "Bruto", "Fee", "Bersih", "Catatan"]],
+        body: report.detailRowsByBucket.LAINNYA.map((item, index) => [
+          String(index + 1),
+          item.title,
+          formatDateShort(item.rawDate),
+          formatCurrencyCell(Math.abs(item.amount)),
+          formatCurrencyCell(0),
+          formatCurrencyCell(item.amount),
+          item.subtitle,
+        ]),
+      });
+    }
+
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i += 1) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(`Halaman ${i} of ${totalPages}`, marginX, pageHeight - 18);
+    }
+
+    doc.save(`buku-kas-${year}-${String(month).padStart(2, "0")}.pdf`);
   }
 
   function applyPeriod() {
@@ -147,6 +290,7 @@ export function BukuKasReport({
         amount: row.mutation === "DEBIT" ? row.amount : -row.amount,
         fee: 0,
         bucket: "LAINNYA",
+        rawDate: row.createdAt,
       })),
     };
 
@@ -403,6 +547,7 @@ function buildPrimaryDetails(rows: Row[], settlementFee: Map<string, number>, bu
       amount: row.amount,
       fee: row.idSettlement ? settlementFee.get(row.idSettlement) ?? 0 : 0,
       bucket,
+      rawDate: row.createdAt,
     }));
 }
 
@@ -516,4 +661,53 @@ function TotalCard({
 function formatSigned(value: number) {
   if (value < 0) return `-${formatRupiah(Math.abs(value))}`;
   return formatRupiah(value);
+}
+
+function formatCurrencyCell(value: number) {
+  const prefix = value < 0 ? "-" : "";
+  return `${prefix}Rp ${formatNumberId(Math.abs(value))}`;
+}
+
+function summaryPdfRow(label: string, summary: PrimarySummary) {
+  return [
+    label,
+    String(summary.count),
+    formatCurrencyCell(summary.masuk),
+    formatCurrencyCell(summary.fee),
+    formatCurrencyCell(summary.masuk - summary.fee),
+  ];
+}
+
+function formatDateTimeLong(value: string | Date) {
+  return new Date(value).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+async function loadImageAsDataUrl(imageUrl: string) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error("Gagal memuat gambar kop");
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal mengubah gambar ke data URL"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function loadKopDataUrl(origin: string) {
+  try {
+    return await loadImageAsDataUrl(`${origin}/kop-surat.png`);
+  } catch {
+    try {
+      return await loadImageAsDataUrl(`${origin}/kop-surat.jpg`);
+    } catch {
+      return null;
+    }
+  }
 }
