@@ -17,6 +17,10 @@ type Row = {
   date: string;
 };
 
+function isTestTransaction(row: Row) {
+  return (row.notes ?? "").trim().toUpperCase().startsWith("[TEST]");
+}
+
 export function AdminTransaksiTable({
   transactions,
   title = "Daftar Transaksi",
@@ -27,19 +31,29 @@ export function AdminTransaksiTable({
   subtitle?: string;
 }) {
   const [query, setQuery] = useState("");
+  const [scope, setScope] = useState<"ALL" | "NORMAL" | "TEST">("ALL");
   const [kopSrc, setKopSrc] = useState("/kop-surat.png");
   const [kopOk, setKopOk] = useState(true);
+
+  const totalTest = useMemo(
+    () => transactions.filter((t) => isTestTransaction(t)).length,
+    [transactions]
+  );
+  const totalNormal = transactions.length - totalTest;
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return transactions.filter(
       (t) =>
-        (t.type ?? "").toLowerCase().includes(q) ||
-        (t.notes ?? "").toLowerCase().includes(q) ||
-        (t.createdBy ?? "").toLowerCase().includes(q) ||
-        t.category.toLowerCase().includes(q)
+        (scope === "ALL" ||
+          (scope === "TEST" && isTestTransaction(t)) ||
+          (scope === "NORMAL" && !isTestTransaction(t))) &&
+        ((t.type ?? "").toLowerCase().includes(q) ||
+          (t.notes ?? "").toLowerCase().includes(q) ||
+          (t.createdBy ?? "").toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q))
     );
-  }, [transactions, query]);
+  }, [transactions, query, scope]);
 
   function exportCsv() {
     const header = ["Tanggal", "Kategori", "Mutasi", "Jenis", "Catatan", "Petugas", "Nominal"];
@@ -310,6 +324,41 @@ export function AdminTransaksiTable({
             className="input pl-11"
           />
         </div>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setScope("ALL")}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+              scope === "ALL"
+                ? "bg-slate-900 text-white"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Semua ({transactions.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope("NORMAL")}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+              scope === "NORMAL"
+                ? "bg-pelican-700 text-white"
+                : "bg-pelican-50 text-pelican-700"
+            }`}
+          >
+            Normal ({totalNormal})
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope("TEST")}
+            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+              scope === "TEST"
+                ? "bg-amber-600 text-white"
+                : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            Data Test ({totalTest})
+          </button>
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-2 print:hidden">
           <button
             type="button"
@@ -343,12 +392,20 @@ export function AdminTransaksiTable({
           <tbody className="divide-y divide-black/5">
             {filtered.map((t) => {
               const masuk = t.mutation === "DEBIT";
+              const isTest = isTestTransaction(t);
               return (
                 <tr key={t.id} className="hover:bg-black/[0.015]">
                   <td className="px-5 py-3">
-                    <p className="font-semibold text-ink">
-                      {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-ink">
+                        {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
+                      </p>
+                      {isTest && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                          TEST
+                        </span>
+                      )}
+                    </div>
                     {t.notes && (
                       <p className="max-w-md truncate text-[11px] text-ink-faint">
                         {t.notes}
@@ -404,14 +461,22 @@ export function AdminTransaksiTable({
       <div className="space-y-3 md:hidden">
         {filtered.map((t) => {
           const masuk = t.mutation === "DEBIT";
+          const isTest = isTestTransaction(t);
           const amountColor = masuk ? "text-pelican-700" : "text-red-500";
           return (
             <div key={t.id} className="card overflow-hidden p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold leading-snug text-ink">
-                    {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold leading-snug text-ink">
+                      {t.type ?? (masuk ? "Pemasukan" : "Pengeluaran")}
+                    </p>
+                    {isTest && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                        TEST
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 text-[11px] leading-snug text-ink-faint">
                     {t.notes ?? "Tanpa catatan"}
                   </p>

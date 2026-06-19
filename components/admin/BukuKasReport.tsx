@@ -1,25 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Icon } from "@/components/Icon";
-import { MONTHS, formatPeriod, formatRupiah, formatDateTime } from "@/lib/format";
+import { MONTHS, formatDate, formatPeriod, formatRupiah } from "@/lib/format";
 import { printWithIOSClass } from "@/lib/printUtils";
+
+type Bucket = "IPL" | "KAS" | "PKK" | "LAINNYA";
 
 type Row = {
   id: number;
   createdAt: string;
   category: string;
   type: string | null;
+  idSettlement: string | null;
   notes: string | null;
   amount: number;
   mutation: string;
 };
 
+type PrimarySummary = {
+  count: number;
+  masuk: number;
+  fee: number;
+};
+
+type DetailItem = {
+  id: number;
+  title: string;
+  subtitle: string;
+  amount: number;
+  fee: number;
+  bucket: Bucket;
+};
+
 export function BukuKasReport({
   year,
   month,
-  category,
   saldoAwal,
   totalMasuk,
   totalKeluar,
@@ -27,31 +43,28 @@ export function BukuKasReport({
 }: {
   year: number;
   month: number;
-  category: string;
   saldoAwal: number;
   totalMasuk: number;
   totalKeluar: number;
   rows: Row[];
 }) {
   const router = useRouter();
-  const saldoAkhir = saldoAwal + totalMasuk - totalKeluar;
-  const categoryLabel =
-    category === "SEMUA" ? "Semua Kas" : category === "PKK" ? "Kas PKK" : "Kas Utama";
-  const printedAt = new Date();
-  const [kopSrc, setKopSrc] = useState("/kop-surat.png");
-  const [kopOk, setKopOk] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(year);
+  const [selectedMonth, setSelectedMonth] = useState(month);
+  const [activeTab, setActiveTab] = useState<"RINGKASAN" | "DETAIL">("RINGKASAN");
+  const [detailBucket, setDetailBucket] = useState<Bucket>("IPL");
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
+  const saldoAkhir = saldoAwal + totalMasuk - totalKeluar;
 
   function printPdf() {
     printWithIOSClass();
   }
 
-  function apply(next: Partial<{ year: number; month: number; category: string }>) {
+  function applyPeriod() {
     const params = new URLSearchParams({
-      year: String(next.year ?? year),
-      month: String(next.month ?? month),
-      category: next.category ?? category,
+      year: String(selectedYear),
+      month: String(selectedMonth),
     });
     router.push(`/admin/bukukas?${params.toString()}`);
   }
@@ -62,7 +75,7 @@ export function BukuKasReport({
       const masuk = r.mutation === "DEBIT" ? r.amount : 0;
       const keluar = r.mutation !== "DEBIT" ? r.amount : 0;
       return [
-        formatDateTime(r.createdAt),
+        formatDate(r.createdAt),
         r.category,
         r.type ?? "",
         (r.notes ?? "").replace(/[\r\n;,]/g, " "),
@@ -70,12 +83,14 @@ export function BukuKasReport({
         keluar,
       ].join(";");
     });
+
     const summary = [
       "",
       `Saldo Awal;;;;${saldoAwal};`,
       `Total;;;;${totalMasuk};${totalKeluar}`,
       `Saldo Akhir;;;;${saldoAkhir};`,
     ];
+
     const csv = [header.join(";"), ...lines, ...summary].join("\n");
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -86,248 +101,419 @@ export function BukuKasReport({
     URL.revokeObjectURL(url);
   }
 
+  const report = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    const rowsByBucket: Record<Bucket, Row[]> = { IPL: [], KAS: [], PKK: [], LAINNYA: [] };
+
+    for (const row of sorted) {
+      rowsByBucket[getBucket(row.type)].push(row);
+    }
+
+    const settlementFee = new Map<string, number>();
+    for (const row of sorted) {
+      if (!row.idSettlement || row.mutation === "DEBIT" || !isFeeRow(row)) continue;
+      settlementFee.set(row.idSettlement, (settlementFee.get(row.idSettlement) ?? 0) + row.amount);
+    }
+
+    const summary = {
+      IPL: buildPrimarySummary(rowsByBucket.IPL),
+      KAS: buildPrimarySummary(rowsByBucket.KAS),
+      PKK: buildPrimarySummary(rowsByBucket.PKK),
+      LAINNYA: {
+        count: rowsByBucket.LAINNYA.length,
+        masuk: sumByMutation(rowsByBucket.LAINNYA, "DEBIT"),
+        keluar: sumByMutation(rowsByBucket.LAINNYA, "KREDIT"),
+      },
+    };
+
+    const totals = {
+      masuk: totalMasuk,
+      keluar: totalKeluar,
+      net: totalMasuk - totalKeluar,
+      masukUtama: sumByCategory(rows, "UTAMA", "DEBIT"),
+      masukPkk: sumByCategory(rows, "PKK", "DEBIT"),
+      keluarUtama: sumByCategory(rows, "UTAMA", "KREDIT"),
+      keluarPkk: sumByCategory(rows, "PKK", "KREDIT"),
+    };
+
+    const detailRowsByBucket: Record<Bucket, DetailItem[]> = {
+      IPL: buildPrimaryDetails(rowsByBucket.IPL, settlementFee, "IPL"),
+      KAS: buildPrimaryDetails(rowsByBucket.KAS, settlementFee, "KAS"),
+      PKK: buildPrimaryDetails(rowsByBucket.PKK, settlementFee, "PKK"),
+      LAINNYA: rowsByBucket.LAINNYA.map((row) => ({
+        id: row.id,
+        title: row.type ?? "Transaksi Lainnya",
+        subtitle: row.notes || `dicatat pada ${formatDate(row.createdAt)}`,
+        amount: row.mutation === "DEBIT" ? row.amount : -row.amount,
+        fee: 0,
+        bucket: "LAINNYA",
+      })),
+    };
+
+    return { summary, totals, detailRowsByBucket };
+  }, [rows, totalMasuk, totalKeluar]);
+
+  const currentDetailRows = report.detailRowsByBucket[detailBucket];
+
   return (
     <div className="bukukas-report">
-      {/* Filter periode */}
-      <div className="card mb-6 flex flex-wrap items-end gap-3 p-4 print:hidden">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Tahun</label>
-          <select
-            value={year}
-            onChange={(e) => apply({ year: Number(e.target.value) })}
-            className="input"
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+      <div className="card mb-4 p-4 print:hidden">
+        <h3 className="mb-4 text-2xl font-bold text-ink">Pilih Periode</h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink-soft">Tahun</label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="input w-full"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-ink-soft">Bulan</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="input w-full"
+            >
+              {MONTHS.map((m, i) => (
+                <option key={m} value={i + 1}>
+                  {m.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Bulan</label>
-          <select
-            value={month}
-            onChange={(e) => apply({ month: Number(e.target.value) })}
-            className="input"
+
+        <button
+          type="button"
+          onClick={applyPeriod}
+          className="mt-4 w-full rounded-md bg-black/20 py-2.5 text-sm font-semibold tracking-wide text-ink-soft"
+        >
+          GENERATE
+        </button>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="rounded-md bg-sky-500 py-2.5 text-sm font-bold tracking-wide text-white"
           >
-            {MONTHS.map((m, i) => (
-              <option key={m} value={i + 1}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold text-ink-soft">Kategori</label>
-          <select
-            value={category}
-            onChange={(e) => apply({ category: e.target.value })}
-            className="input"
-          >
-            <option value="SEMUA">Semua</option>
-            <option value="UTAMA">Kas Utama</option>
-            <option value="PKK">Kas PKK</option>
-          </select>
-        </div>
-        <div className="ml-auto flex gap-2">
-          <button onClick={exportCsv} className="btn-ghost">
-            <Icon name="receipt" size={18} />
-            Excel
+            TO EXCEL
           </button>
-          <button onClick={printPdf} className="btn-ghost">
-            <Icon name="receipt" size={18} />
-            PDF
+          <button
+            type="button"
+            onClick={printPdf}
+            className="rounded-md bg-red-600 py-2.5 text-sm font-bold tracking-wide text-white"
+          >
+            TO PDF
           </button>
         </div>
       </div>
 
-      {/* Judul cetak */}
-      <div className="print-report mb-4">
-        <div className="print-report__header print-only">
-          {kopOk ? (
-            <img
-              src={kopSrc}
-              alt="Kop Surat Cluster Puri Pelican"
-              className="print-kop-image"
-              onError={() => {
-                if (kopSrc.endsWith(".png")) {
-                  setKopSrc("/kop-surat.jpg");
-                  return;
-                }
-                setKopOk(false);
-              }}
+      <h2 className="mb-3 text-2xl font-bold text-ink">Buku Kas Bulan {formatPeriod(year, month)}</h2>
+
+      <div className="mb-4 grid grid-cols-2 border-b border-black/10">
+        <button
+          type="button"
+          onClick={() => setActiveTab("RINGKASAN")}
+          className={`border-b-2 py-3 text-sm font-semibold tracking-wide ${
+            activeTab === "RINGKASAN" ? "border-black/40 text-ink" : "border-transparent text-ink-soft"
+          }`}
+        >
+          RINGKASAN
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("DETAIL")}
+          className={`border-b-2 py-3 text-sm font-semibold tracking-wide ${
+            activeTab === "DETAIL" ? "border-black/40 text-ink" : "border-transparent text-ink-soft"
+          }`}
+        >
+          DETAIL
+        </button>
+      </div>
+
+      {activeTab === "RINGKASAN" ? (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <SummaryPrimary
+              title="IPL"
+              count={report.summary.IPL.count}
+              amount={report.summary.IPL.masuk}
+              fee={report.summary.IPL.fee}
+              tone="blue"
             />
-          ) : (
-            <>
-              <p className="print-report__org">PERUMAHAN PURI PELICAN</p>
-              <p className="print-report__title">LAPORAN BUKU KAS</p>
-              <p className="print-report__subtitle">Periode {formatPeriod(year, month)}</p>
-            </>
-          )}
-        </div>
+            <SummaryPrimary
+              title="Kas"
+              count={report.summary.KAS.count}
+              amount={report.summary.KAS.masuk}
+              fee={report.summary.KAS.fee}
+              tone="green"
+            />
+            <SummaryPrimary
+              title="PKK"
+              count={report.summary.PKK.count}
+              amount={report.summary.PKK.masuk}
+              fee={report.summary.PKK.fee}
+              tone="pink"
+            />
+            <SummaryOthers
+              count={report.summary.LAINNYA.count}
+              masuk={report.summary.LAINNYA.masuk}
+              keluar={report.summary.LAINNYA.keluar}
+            />
+          </div>
 
-        <div className="print-report__meta print-only">
-          <p>
-            <span>Kategori</span>
-            <strong>{categoryLabel}</strong>
-          </p>
-          <p>
-            <span>Tanggal Cetak</span>
-            <strong>{formatDateTime(printedAt)}</strong>
-          </p>
-        </div>
-
-        <h2 className="text-lg font-bold text-ink screen-only">
-          Buku Kas — {formatPeriod(year, month)}
-        </h2>
-        <p className="text-xs text-ink-soft screen-only">
-          Kategori: {categoryLabel}
-        </p>
-      </div>
-
-      {/* Ringkasan */}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 print-summary-grid">
-        <Summary label="Saldo Awal" value={saldoAwal} tone="ink" />
-        <Summary label="Pemasukan" value={totalMasuk} tone="green" />
-        <Summary label="Pengeluaran" value={totalKeluar} tone="red" />
-        <Summary label="Saldo Akhir" value={saldoAkhir} tone="ink" strong />
-      </div>
-
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {rows.map((r) => {
-          const masuk = r.mutation === "DEBIT";
-          return (
-            <div key={r.id} className="card overflow-hidden p-4">
-              <div className="grid grid-cols-[1.1fr_1.6fr_0.7fr] gap-3 border-b border-black/5 pb-3 text-[11px] font-semibold text-ink-faint">
-                <div>Tanggal</div>
-                <div>Keterangan</div>
-                <div className="text-right">Kategori</div>
-              </div>
-
-              <div className="grid grid-cols-[1.1fr_1.6fr_0.7fr] gap-3 py-3 text-sm">
-                <div className="text-ink-soft whitespace-nowrap">{formatDateTime(r.createdAt)}</div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-ink">{r.type ?? "Transaksi"}</p>
-                  {r.notes && <p className="mt-0.5 text-[11px] leading-snug text-ink-faint">{r.notes}</p>}
-                </div>
-                <div className="text-right text-xs font-medium text-ink-faint">{r.category}</div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 border-t border-black/5 pt-3 text-sm">
-                <div>
-                  <p className="text-[11px] text-ink-faint">Uang Masuk</p>
-                  <p className={`font-semibold ${masuk ? "text-pelican-700" : "text-ink-soft"}`}>
-                    {masuk ? formatRupiah(r.amount) : "—"}
+          <details className="card overflow-hidden" open>
+            <summary className="flex cursor-pointer list-none items-center justify-between bg-amber-100/70 px-4 py-3 font-bold text-ink">
+              <span>Rincian Transaksi Lainnya</span>
+              <span className="text-xs font-medium text-ink-soft">{report.summary.LAINNYA.count} trx</span>
+            </summary>
+            <div className="space-y-2 px-4 py-3">
+              {report.detailRowsByBucket.LAINNYA.slice(0, 8).map((item) => (
+                <div key={item.id} className="rounded border border-black/10 px-3 py-2 text-sm">
+                  <p className="font-semibold text-ink">{item.title}</p>
+                  <p className="text-xs text-ink-soft">{item.subtitle}</p>
+                  <p className={`mt-1 font-bold ${item.amount >= 0 ? "text-pelican-700" : "text-red-600"}`}>
+                    {item.amount >= 0 ? "+ " : "- "}
+                    {formatRupiah(Math.abs(item.amount))}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-[11px] text-ink-faint">Uang Keluar</p>
-                  <p className={`font-semibold ${!masuk ? "text-red-500" : "text-ink-soft"}`}>
-                    {!masuk ? formatRupiah(r.amount) : "—"}
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
-          );
-        })}
+          </details>
 
-        {rows.length === 0 && (
-          <p className="p-8 text-center text-sm text-ink-faint">
-            Belum ada transaksi pada periode ini.
-          </p>
-        )}
-      </div>
+          <TotalCard
+            title="Total Pemasukan"
+            total={report.totals.masuk}
+            subA={{ label: "UTAMA (IPL+Kas+Lainnya)", value: report.totals.masukUtama }}
+            subB={{ label: "PKK (PKK+Lainnya)", value: report.totals.masukPkk }}
+            tone="green"
+          />
+          <TotalCard
+            title="Total Pengeluaran"
+            total={report.totals.keluar}
+            subA={{ label: "UTAMA (fee+Lainnya keluar)", value: report.totals.keluarUtama }}
+            subB={{ label: "PKK (fee+Lainnya keluar)", value: report.totals.keluarPkk }}
+            tone="red"
+          />
+          <TotalCard
+            title="Saldo Bersih Bulan Ini"
+            total={report.totals.net}
+            subA={{ label: "UTAMA", value: report.totals.masukUtama - report.totals.keluarUtama }}
+            subB={{ label: "PKK", value: report.totals.masukPkk - report.totals.keluarPkk }}
+            tone="net"
+          />
 
-      {/* Tabel transaksi desktop */}
-      <div className="card hidden overflow-hidden print:block md:block print-table-wrap">
-        <table className="w-full text-left text-sm print-table">
-          <thead className="border-b border-black/5 bg-black/[0.02] text-xs font-semibold text-ink-faint">
-            <tr>
-              <th className="px-4 py-3">Tanggal</th>
-              <th className="px-4 py-3">Keterangan</th>
-              <th className="px-4 py-3 text-center">Kategori</th>
-              <th className="px-4 py-3 text-right">Masuk</th>
-              <th className="px-4 py-3 text-right">Keluar</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-black/5">
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className="px-4 py-3 text-ink-soft whitespace-nowrap">
-                  {formatDateTime(r.createdAt)}
-                </td>
-                <td className="px-4 py-3">
-                  <p className="font-medium text-ink">{r.type ?? "Transaksi"}</p>
-                  {r.notes && <p className="text-[11px] text-ink-faint">{r.notes}</p>}
-                </td>
-                <td className="px-4 py-3 text-center text-xs text-ink-faint">{r.category}</td>
-                <td className="px-4 py-3 text-right font-semibold text-pelican-700">
-                  {r.mutation === "DEBIT" ? formatRupiah(r.amount) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right font-semibold text-red-500">
-                  {r.mutation !== "DEBIT" ? formatRupiah(r.amount) : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot className="border-t border-black/5 bg-black/[0.02] text-sm font-bold">
-            <tr>
-              <td className="px-4 py-3" colSpan={3}>
-                Total
-              </td>
-              <td className="px-4 py-3 text-right text-pelican-700">
-                {formatRupiah(totalMasuk)}
-              </td>
-              <td className="px-4 py-3 text-right text-red-500">
-                {formatRupiah(totalKeluar)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-        {rows.length === 0 && (
-          <p className="p-8 text-center text-sm text-ink-faint">
-            Belum ada transaksi pada periode ini.
-          </p>
-        )}
-      </div>
-
-      <div className="print-signatures print-only">
-        <div className="print-signatures__item">
-          <p>Dibuat oleh,</p>
-          <div />
-          <p>Admin / Bendahara</p>
+          <div className="card hidden p-4 print:block">
+            <p className="text-xs text-ink-faint">Saldo Awal</p>
+            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(saldoAwal)}</p>
+            <p className="mt-2 text-xs text-ink-faint">Saldo Akhir</p>
+            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(saldoAkhir)}</p>
+          </div>
         </div>
-        <div className="print-signatures__item">
-          <p>Mengetahui,</p>
-          <div />
-          <p>Ketua Pengelola</p>
+      ) : (
+        <div>
+          <div className="mb-3 grid grid-cols-4 border-b border-black/10">
+            {(["IPL", "KAS", "PKK", "LAINNYA"] as Bucket[]).map((bucket) => (
+              <button
+                type="button"
+                key={bucket}
+                onClick={() => setDetailBucket(bucket)}
+                className={`border-b-2 py-3 text-xs font-semibold tracking-wide ${
+                  detailBucket === bucket ? "border-black/40 text-ink" : "border-transparent text-ink-soft"
+                }`}
+              >
+                {bucket} ({bucket === "LAINNYA" ? report.summary.LAINNYA.count : report.summary[bucket].count})
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            {currentDetailRows.map((item) => (
+              <div key={item.id} className="card border-l-4 border-l-green-500 p-4">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <p className="text-xl font-bold text-ink">{item.title}</p>
+                  <span className="rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">
+                    {item.bucket}
+                  </span>
+                </div>
+                <p className="text-xs text-ink-soft">{item.subtitle}</p>
+                <p className={`mt-2 text-3xl font-extrabold ${item.amount >= 0 ? "text-pelican-700" : "text-red-600"}`}>
+                  {item.amount >= 0 ? "Rp " : "- Rp "}
+                  {formatNumberId(Math.abs(item.amount))}
+                </p>
+                {item.fee > 0 && <p className="mt-1 text-sm text-red-500">fee: -{formatRupiah(item.fee)}</p>}
+              </div>
+            ))}
+
+            {currentDetailRows.length === 0 && (
+              <p className="card p-8 text-center text-sm text-ink-faint">
+                Tidak ada transaksi pada kategori ini di periode {formatPeriod(year, month)}.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getBucket(type: string | null): Bucket {
+  const upper = (type ?? "").trim().toUpperCase();
+  if (upper === "IPL" || upper === "KAS" || upper === "PKK") return upper;
+  return "LAINNYA";
+}
+
+function isFeeRow(row: Row): boolean {
+  return row.mutation !== "DEBIT" && /^\s*FEE\s*-/i.test(row.notes ?? "");
+}
+
+function sumByMutation(rows: Row[], mutation: "DEBIT" | "KREDIT") {
+  return rows.filter((row) => row.mutation === mutation).reduce((sum, row) => sum + row.amount, 0);
+}
+
+function sumByCategory(rows: Row[], category: "UTAMA" | "PKK", mutation: "DEBIT" | "KREDIT") {
+  return rows
+    .filter((row) => row.category.toUpperCase() === category && row.mutation === mutation)
+    .reduce((sum, row) => sum + row.amount, 0);
+}
+
+function buildPrimarySummary(rows: Row[]): PrimarySummary {
+  return {
+    count: rows.filter((row) => row.mutation === "DEBIT").length,
+    masuk: rows.filter((row) => row.mutation === "DEBIT").reduce((sum, row) => sum + row.amount, 0),
+    fee: rows.filter((row) => isFeeRow(row)).reduce((sum, row) => sum + row.amount, 0),
+  };
+}
+
+function buildPrimaryDetails(rows: Row[], settlementFee: Map<string, number>, bucket: Bucket): DetailItem[] {
+  return rows
+    .filter((row) => row.mutation === "DEBIT")
+    .map((row) => ({
+      id: row.id,
+      title: extractHouseLabel(row.notes) || row.type || "Transaksi",
+      subtitle: `dibayar pada ${formatDateShort(row.createdAt)}`,
+      amount: row.amount,
+      fee: row.idSettlement ? settlementFee.get(row.idSettlement) ?? 0 : 0,
+      bucket,
+    }));
+}
+
+function extractHouseLabel(notes: string | null): string | null {
+  if (!notes) return null;
+  const match = notes.match(/(PLC-\d+\s*No\s*\d+)/i);
+  return match ? match[1].replace(/\s+/g, " ") : null;
+}
+
+function formatNumberId(value: number) {
+  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatDateShort(value: string | Date) {
+  return new Date(value).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function SummaryPrimary({
+  title,
+  count,
+  amount,
+  fee,
+  tone,
+}: {
+  title: string;
+  count: number;
+  amount: number;
+  fee: number;
+  tone: "blue" | "green" | "pink";
+}) {
+  const bg = tone === "blue" ? "bg-sky-50" : tone === "green" ? "bg-green-50" : "bg-pink-50";
+  return (
+    <div className={`card ${bg} p-4`}>
+      <div className="mb-2 flex items-center justify-between text-sm text-ink-soft">
+        <p>{title}</p>
+        <p>{count} trx</p>
+      </div>
+      <p className="text-3xl font-extrabold text-ink">{formatRupiah(amount)}</p>
+      <p className="mt-2 text-sm text-red-500">fee: -{formatRupiah(fee)}</p>
+    </div>
+  );
+}
+
+function SummaryOthers({ count, masuk, keluar }: { count: number; masuk: number; keluar: number }) {
+  return (
+    <div className="card bg-amber-50 p-4">
+      <div className="mb-2 flex items-center justify-between text-sm text-ink-soft">
+        <p>Lainnya</p>
+        <p>{count} trx</p>
+      </div>
+      <p className="text-sm text-pelican-700">masuk: +{formatRupiah(masuk)}</p>
+      <p className="mt-1 text-sm text-red-500">keluar: -{formatRupiah(keluar)}</p>
+    </div>
+  );
+}
+
+function TotalCard({
+  title,
+  total,
+  subA,
+  subB,
+  tone,
+}: {
+  title: string;
+  total: number;
+  subA: { label: string; value: number };
+  subB: { label: string; value: number };
+  tone: "green" | "red" | "net";
+}) {
+  const bg = tone === "green" ? "bg-green-50" : "bg-pink-50";
+  const border = tone === "net" ? "border border-red-500" : "";
+  const color =
+    tone === "green"
+      ? "text-pelican-700"
+      : tone === "red"
+        ? "text-red-600"
+        : total >= 0
+          ? "text-pelican-700"
+          : "text-red-600";
+  const sign = tone === "net" && total < 0 ? "- " : "";
+
+  return (
+    <div className={`card ${bg} ${border} p-4`}>
+      <p className="text-sm text-ink-soft">{title}</p>
+      <p className={`mt-2 text-4xl font-extrabold ${color}`}>
+        {sign}
+        {formatRupiah(Math.abs(total))}
+      </p>
+      <div className="mt-4 space-y-1 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-ink-soft">{subA.label}</p>
+          <p className={`font-bold ${subA.value < 0 ? "text-red-600" : "text-ink"}`}>
+            {formatSigned(subA.value)}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-ink-soft">{subB.label}</p>
+          <p className={`font-bold ${subB.value < 0 ? "text-red-600" : "text-ink"}`}>
+            {formatSigned(subB.value)}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function Summary({
-  label,
-  value,
-  tone,
-  strong,
-}: {
-  label: string;
-  value: number;
-  tone: "ink" | "green" | "red";
-  strong?: boolean;
-}) {
-  const color =
-    tone === "green" ? "text-pelican-700" : tone === "red" ? "text-red-500" : "text-ink";
-  return (
-    <div className="card p-4 print-summary-card">
-      <p className="text-xs text-ink-faint">{label}</p>
-      <p className={`mt-1 ${strong ? "text-xl" : "text-lg"} font-extrabold ${color}`}>
-        {formatRupiah(value)}
-      </p>
-    </div>
-  );
+function formatSigned(value: number) {
+  if (value < 0) return `-${formatRupiah(Math.abs(value))}`;
+  return formatRupiah(value);
 }

@@ -31,6 +31,15 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
   const [end, setEnd] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
 
+  function resolveImageSrc(image: string | null): string {
+    const src = String(image ?? "").trim();
+    if (!src) return src;
+    if (src.startsWith("/") || /^https?:\/\//i.test(src) || src.startsWith("data:")) {
+      return src;
+    }
+    return `/files/transaction/${encodeURIComponent(src)}`;
+  }
+
   const types = useMemo(() => {
     const set = new Set<string>();
     for (const t of transactions) if (t.type) set.add(t.type);
@@ -184,7 +193,7 @@ export function TransaksiList({ transactions }: { transactions: TxLite[] }) {
                       {t.createdBy && <span>· dibuat oleh: {t.createdBy}</span>}
                       {t.image && (
                         <button
-                          onClick={() => setPreview(t.image)}
+                          onClick={() => setPreview(resolveImageSrc(t.image))}
                           className="font-semibold text-pelican-600"
                         >
                           Lihat Gambar
