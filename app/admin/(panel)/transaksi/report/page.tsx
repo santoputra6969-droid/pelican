@@ -1,6 +1,7 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { TransaksiJournalReport } from "@/components/admin/TransaksiJournalReport";
 import { MONTHS } from "@/lib/format";
+import { getLegacyJournalReportMetrics } from "@/lib/legacyJournalReportMetrics";
 import { getLegacyMonthlyRow, getLegacyMonthlyRows } from "@/lib/legacyMonthlyReport";
 import { prisma } from "@/lib/prisma";
 
@@ -67,7 +68,9 @@ export default async function AdminTransaksiReportPage({
     );
     const bucket = dailyMap.get(day);
     const byCategory = categoryMap.get(row.category) ?? { count: 0, masuk: 0, keluar: 0 };
-    byCategory.count += 1;
+    if (!/^\s*FEE\s*-/i.test(String(row.notes ?? ""))) {
+      byCategory.count += 1;
+    }
 
     if (row.mutation === "DEBIT") {
       totalMasuk += row.amount;
@@ -108,9 +111,15 @@ export default async function AdminTransaksiReportPage({
 
   const effectiveMasuk = legacySelected?.masuk ?? totalMasuk;
   const effectiveKeluar = legacySelected?.keluar ?? totalKeluar;
+  const legacyMetrics = getLegacyJournalReportMetrics(year, month, category);
 
   const effectiveCategorySummary =
-    category === "SEMUA" && legacyRowsThisMonth.length > 0
+    legacyMetrics?.categorySummary.length
+      ? legacyMetrics.categorySummary.map((row) => ({
+          ...row,
+          net: row.masuk - row.keluar,
+        }))
+      : category === "SEMUA" && legacyRowsThisMonth.length > 0
       ? categorySummary.map((row) => {
           const legacy = legacyRowsThisMonth.find((legacyRow) => legacyRow.category === row.name);
           if (!legacy) return row;
@@ -123,8 +132,9 @@ export default async function AdminTransaksiReportPage({
         })
       : categorySummary;
 
-  const avgMasuk = transactions.length > 0 ? Math.round(effectiveMasuk / transactions.length) : 0;
-  const avgKeluar = transactions.length > 0 ? Math.round(effectiveKeluar / transactions.length) : 0;
+    const totalCount = legacyMetrics?.totalCount ?? transactions.length;
+    const avgMasuk = legacyMetrics?.avgMasuk ?? (transactions.length > 0 ? Math.round(effectiveMasuk / transactions.filter((row) => row.mutation === "DEBIT").length) : 0);
+    const avgKeluar = legacyMetrics?.avgKeluar ?? (transactions.length > 0 ? Math.round(effectiveKeluar / transactions.filter((row) => row.mutation !== "DEBIT").length) : 0);
 
   return (
     <div className="px-5 py-6 lg:px-8">
@@ -140,7 +150,7 @@ export default async function AdminTransaksiReportPage({
         daily={daily}
         totalMasuk={effectiveMasuk}
         totalKeluar={effectiveKeluar}
-        totalCount={transactions.length}
+        totalCount={totalCount}
         avgMasuk={avgMasuk}
         avgKeluar={avgKeluar}
         categorySummary={effectiveCategorySummary}

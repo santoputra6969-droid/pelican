@@ -1,0 +1,1273 @@
+{
+  "count": 66,
+  "results": [
+    {
+      "year": 2024,
+      "month": 1,
+      "category": "SEMUA",
+      "totalCount": 11,
+      "countMasuk": 2,
+      "countKeluar": 9,
+      "avgMasuk": 1491294,
+      "avgKeluar": 85238,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 11,
+          "masuk": 2982588,
+          "keluar": 767140
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 1,
+      "category": "UTAMA",
+      "totalCount": 11,
+      "countMasuk": 2,
+      "countKeluar": 9,
+      "avgMasuk": 1491294,
+      "avgKeluar": 85238,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 11,
+          "masuk": 2982588,
+          "keluar": 767140
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 1,
+      "category": "PKK",
+      "totalCount": 0,
+      "countMasuk": 0,
+      "countKeluar": 0,
+      "avgMasuk": 0,
+      "avgKeluar": 0,
+      "categorySummary": []
+    },
+    {
+      "year": 2024,
+      "month": 2,
+      "category": "SEMUA",
+      "totalCount": 249,
+      "countMasuk": 123,
+      "countKeluar": 126,
+      "avgMasuk": 19594,
+      "avgKeluar": 12535,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 249,
+          "masuk": 2410027.67,
+          "keluar": 1579445
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 2,
+      "category": "UTAMA",
+      "totalCount": 249,
+      "countMasuk": 123,
+      "countKeluar": 126,
+      "avgMasuk": 19594,
+      "avgKeluar": 12535,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 249,
+          "masuk": 2410027.67,
+          "keluar": 1579445
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 2,
+      "category": "PKK",
+      "totalCount": 0,
+      "countMasuk": 0,
+      "countKeluar": 0,
+      "avgMasuk": 0,
+      "avgKeluar": 0,
+      "categorySummary": []
+    },
+    {
+      "year": 2024,
+      "month": 3,
+      "category": "SEMUA",
+      "totalCount": 149,
+      "countMasuk": 70,
+      "countKeluar": 79,
+      "avgMasuk": 48843,
+      "avgKeluar": 11943,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 149,
+          "masuk": 3419000,
+          "keluar": 943520
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 3,
+      "category": "UTAMA",
+      "totalCount": 149,
+      "countMasuk": 70,
+      "countKeluar": 79,
+      "avgMasuk": 48843,
+      "avgKeluar": 11943,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 149,
+          "masuk": 3419000,
+          "keluar": 943520
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 3,
+      "category": "PKK",
+      "totalCount": 0,
+      "countMasuk": 0,
+      "countKeluar": 0,
+      "avgMasuk": 0,
+      "avgKeluar": 0,
+      "categorySummary": []
+    },
+    {
+      "year": 2024,
+      "month": 4,
+      "category": "SEMUA",
+      "totalCount": 199,
+      "countMasuk": 99,
+      "countKeluar": 100,
+      "avgMasuk": 19698,
+      "avgKeluar": 737,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 199,
+          "masuk": 1950094.54,
+          "keluar": 73650
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 4,
+      "category": "UTAMA",
+      "totalCount": 199,
+      "countMasuk": 99,
+      "countKeluar": 100,
+      "avgMasuk": 19698,
+      "avgKeluar": 737,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 199,
+          "masuk": 1950094.54,
+          "keluar": 73650
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 4,
+      "category": "PKK",
+      "totalCount": 0,
+      "countMasuk": 0,
+      "countKeluar": 0,
+      "avgMasuk": 0,
+      "avgKeluar": 0,
+      "categorySummary": []
+    },
+    {
+      "year": 2024,
+      "month": 5,
+      "category": "SEMUA",
+      "totalCount": 251,
+      "countMasuk": 120,
+      "countKeluar": 131,
+      "avgMasuk": 69090,
+      "avgKeluar": 50852,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 13,
+          "masuk": 4630700,
+          "keluar": 701365
+        },
+        {
+          "name": "UTAMA",
+          "count": 238,
+          "masuk": 3660144.09,
+          "keluar": 5960290
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 5,
+      "category": "UTAMA",
+      "totalCount": 238,
+      "countMasuk": 113,
+      "countKeluar": 125,
+      "avgMasuk": 32391,
+      "avgKeluar": 47682,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 238,
+          "masuk": 3660144.09,
+          "keluar": 5960290
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 5,
+      "category": "PKK",
+      "totalCount": 13,
+      "countMasuk": 7,
+      "countKeluar": 6,
+      "avgMasuk": 661529,
+      "avgKeluar": 116894,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 13,
+          "masuk": 4630700,
+          "keluar": 701365
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 1,
+      "category": "SEMUA",
+      "totalCount": 291,
+      "countMasuk": 147,
+      "countKeluar": 144,
+      "avgMasuk": 57415,
+      "avgKeluar": 5262,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 111,
+          "masuk": 2080000,
+          "keluar": 713195
+        },
+        {
+          "name": "UTAMA",
+          "count": 180,
+          "masuk": 6360000,
+          "keluar": 44520
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 1,
+      "category": "UTAMA",
+      "totalCount": 180,
+      "countMasuk": 90,
+      "countKeluar": 90,
+      "avgMasuk": 70667,
+      "avgKeluar": 495,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 180,
+          "masuk": 6360000,
+          "keluar": 44520
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 1,
+      "category": "PKK",
+      "totalCount": 111,
+      "countMasuk": 57,
+      "countKeluar": 54,
+      "avgMasuk": 36491,
+      "avgKeluar": 13207,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 111,
+          "masuk": 2080000,
+          "keluar": 713195
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 2,
+      "category": "SEMUA",
+      "totalCount": 268,
+      "countMasuk": 131,
+      "countKeluar": 137,
+      "avgMasuk": 39237,
+      "avgKeluar": 61311,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 170,
+          "masuk": 3860000,
+          "keluar": 8391858
+        },
+        {
+          "name": "PKK",
+          "count": 98,
+          "masuk": 1280000,
+          "keluar": 7805
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 2,
+      "category": "UTAMA",
+      "totalCount": 170,
+      "countMasuk": 81,
+      "countKeluar": 89,
+      "avgMasuk": 47654,
+      "avgKeluar": 94291,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 170,
+          "masuk": 3860000,
+          "keluar": 8391858
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 2,
+      "category": "PKK",
+      "totalCount": 98,
+      "countMasuk": 50,
+      "countKeluar": 48,
+      "avgMasuk": 25600,
+      "avgKeluar": 163,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 98,
+          "masuk": 1280000,
+          "keluar": 7805
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 3,
+      "category": "SEMUA",
+      "totalCount": 172,
+      "countMasuk": 83,
+      "countKeluar": 89,
+      "avgMasuk": 40241,
+      "avgKeluar": 19432,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 136,
+          "masuk": 2520000,
+          "keluar": 465439
+        },
+        {
+          "name": "PKK",
+          "count": 36,
+          "masuk": 820000,
+          "keluar": 1264030
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 3,
+      "category": "UTAMA",
+      "totalCount": 136,
+      "countMasuk": 66,
+      "countKeluar": 70,
+      "avgMasuk": 38182,
+      "avgKeluar": 6649,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 136,
+          "masuk": 2520000,
+          "keluar": 465439
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 3,
+      "category": "PKK",
+      "totalCount": 36,
+      "countMasuk": 17,
+      "countKeluar": 19,
+      "avgMasuk": 48235,
+      "avgKeluar": 66528,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 36,
+          "masuk": 820000,
+          "keluar": 1264030
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 4,
+      "category": "SEMUA",
+      "totalCount": 157,
+      "countMasuk": 78,
+      "countKeluar": 79,
+      "avgMasuk": 42372,
+      "avgKeluar": 6103,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 112,
+          "masuk": 2580000,
+          "keluar": 479403
+        },
+        {
+          "name": "PKK",
+          "count": 45,
+          "masuk": 725000,
+          "keluar": 2695
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 4,
+      "category": "UTAMA",
+      "totalCount": 112,
+      "countMasuk": 54,
+      "countKeluar": 58,
+      "avgMasuk": 47778,
+      "avgKeluar": 8266,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 112,
+          "masuk": 2580000,
+          "keluar": 479403
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 4,
+      "category": "PKK",
+      "totalCount": 45,
+      "countMasuk": 24,
+      "countKeluar": 21,
+      "avgMasuk": 30208,
+      "avgKeluar": 128,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 45,
+          "masuk": 725000,
+          "keluar": 2695
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 5,
+      "category": "SEMUA",
+      "totalCount": 162,
+      "countMasuk": 81,
+      "countKeluar": 81,
+      "avgMasuk": 44444,
+      "avgKeluar": 4287,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 580000,
+          "keluar": 2310
+        },
+        {
+          "name": "UTAMA",
+          "count": 120,
+          "masuk": 3020000,
+          "keluar": 344940
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 5,
+      "category": "UTAMA",
+      "totalCount": 120,
+      "countMasuk": 59,
+      "countKeluar": 61,
+      "avgMasuk": 51186,
+      "avgKeluar": 5655,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 120,
+          "masuk": 3020000,
+          "keluar": 344940
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 5,
+      "category": "PKK",
+      "totalCount": 42,
+      "countMasuk": 22,
+      "countKeluar": 20,
+      "avgMasuk": 26364,
+      "avgKeluar": 116,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 580000,
+          "keluar": 2310
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 6,
+      "category": "SEMUA",
+      "totalCount": 165,
+      "countMasuk": 81,
+      "countKeluar": 84,
+      "avgMasuk": 33580,
+      "avgKeluar": 5495,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 123,
+          "masuk": 2380000,
+          "keluar": 459185
+        },
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 340000,
+          "keluar": 2380
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 6,
+      "category": "UTAMA",
+      "totalCount": 123,
+      "countMasuk": 60,
+      "countKeluar": 63,
+      "avgMasuk": 39667,
+      "avgKeluar": 7289,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 123,
+          "masuk": 2380000,
+          "keluar": 459185
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 6,
+      "category": "PKK",
+      "totalCount": 42,
+      "countMasuk": 21,
+      "countKeluar": 21,
+      "avgMasuk": 16190,
+      "avgKeluar": 113,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 340000,
+          "keluar": 2380
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 7,
+      "category": "SEMUA",
+      "totalCount": 167,
+      "countMasuk": 79,
+      "countKeluar": 88,
+      "avgMasuk": 42658,
+      "avgKeluar": 17635,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 126,
+          "masuk": 2400000,
+          "keluar": 1182500
+        },
+        {
+          "name": "PKK",
+          "count": 41,
+          "masuk": 970000,
+          "keluar": 369345
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 7,
+      "category": "UTAMA",
+      "totalCount": 126,
+      "countMasuk": 58,
+      "countKeluar": 68,
+      "avgMasuk": 41379,
+      "avgKeluar": 17390,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 126,
+          "masuk": 2400000,
+          "keluar": 1182500
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 7,
+      "category": "PKK",
+      "totalCount": 41,
+      "countMasuk": 21,
+      "countKeluar": 20,
+      "avgMasuk": 46190,
+      "avgKeluar": 18467,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 41,
+          "masuk": 970000,
+          "keluar": 369345
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 8,
+      "category": "SEMUA",
+      "totalCount": 128,
+      "countMasuk": 56,
+      "countKeluar": 72,
+      "avgMasuk": 36339,
+      "avgKeluar": 130016,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 555000,
+          "keluar": 397785
+        },
+        {
+          "name": "UTAMA",
+          "count": 86,
+          "masuk": 1480000,
+          "keluar": 8963360
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 8,
+      "category": "UTAMA",
+      "totalCount": 86,
+      "countMasuk": 35,
+      "countKeluar": 51,
+      "avgMasuk": 42286,
+      "avgKeluar": 175752,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 86,
+          "masuk": 1480000,
+          "keluar": 8963360
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 8,
+      "category": "PKK",
+      "totalCount": 42,
+      "countMasuk": 21,
+      "countKeluar": 21,
+      "avgMasuk": 26429,
+      "avgKeluar": 18942,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 42,
+          "masuk": 555000,
+          "keluar": 397785
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 9,
+      "category": "SEMUA",
+      "totalCount": 120,
+      "countMasuk": 55,
+      "countKeluar": 65,
+      "avgMasuk": 35864,
+      "avgKeluar": 55246,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 94,
+          "masuk": 1867524,
+          "keluar": 2085415
+        },
+        {
+          "name": "PKK",
+          "count": 26,
+          "masuk": 105000,
+          "keluar": 1505560
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 9,
+      "category": "UTAMA",
+      "totalCount": 94,
+      "countMasuk": 43,
+      "countKeluar": 51,
+      "avgMasuk": 43431,
+      "avgKeluar": 40890,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 94,
+          "masuk": 1867524,
+          "keluar": 2085415
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 9,
+      "category": "PKK",
+      "totalCount": 26,
+      "countMasuk": 12,
+      "countKeluar": 14,
+      "avgMasuk": 8750,
+      "avgKeluar": 107540,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 26,
+          "masuk": 105000,
+          "keluar": 1505560
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 10,
+      "category": "SEMUA",
+      "totalCount": 257,
+      "countMasuk": 122,
+      "countKeluar": 135,
+      "avgMasuk": 141592,
+      "avgKeluar": 26092,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 210,
+          "masuk": 16769181.8,
+          "keluar": 2873928
+        },
+        {
+          "name": "PKK",
+          "count": 47,
+          "masuk": 505000,
+          "keluar": 648535
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 10,
+      "category": "UTAMA",
+      "totalCount": 210,
+      "countMasuk": 101,
+      "countKeluar": 109,
+      "avgMasuk": 166032,
+      "avgKeluar": 26366,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 210,
+          "masuk": 16769181.8,
+          "keluar": 2873928
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 10,
+      "category": "PKK",
+      "totalCount": 47,
+      "countMasuk": 21,
+      "countKeluar": 26,
+      "avgMasuk": 24048,
+      "avgKeluar": 24944,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 47,
+          "masuk": 505000,
+          "keluar": 648535
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 11,
+      "category": "SEMUA",
+      "totalCount": 363,
+      "countMasuk": 168,
+      "countKeluar": 195,
+      "avgMasuk": 157728,
+      "avgKeluar": 31645,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 339,
+          "masuk": 26298365,
+          "keluar": 5209399
+        },
+        {
+          "name": "PKK",
+          "count": 24,
+          "masuk": 200000,
+          "keluar": 961400
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 11,
+      "category": "UTAMA",
+      "totalCount": 339,
+      "countMasuk": 158,
+      "countKeluar": 181,
+      "avgMasuk": 166445,
+      "avgKeluar": 28781,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 339,
+          "masuk": 26298365,
+          "keluar": 5209399
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 11,
+      "category": "PKK",
+      "totalCount": 24,
+      "countMasuk": 10,
+      "countKeluar": 14,
+      "avgMasuk": 20000,
+      "avgKeluar": 68671,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 24,
+          "masuk": 200000,
+          "keluar": 961400
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 12,
+      "category": "SEMUA",
+      "totalCount": 349,
+      "countMasuk": 161,
+      "countKeluar": 188,
+      "avgMasuk": 176546,
+      "avgKeluar": 35888,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 321,
+          "masuk": 28163866.93,
+          "keluar": 5545132.39
+        },
+        {
+          "name": "PKK",
+          "count": 28,
+          "masuk": 260000,
+          "keluar": 1201820
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 12,
+      "category": "UTAMA",
+      "totalCount": 321,
+      "countMasuk": 149,
+      "countKeluar": 172,
+      "avgMasuk": 189019,
+      "avgKeluar": 32239,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 321,
+          "masuk": 28163866.93,
+          "keluar": 5545132.39
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "month": 12,
+      "category": "PKK",
+      "totalCount": 28,
+      "countMasuk": 12,
+      "countKeluar": 16,
+      "avgMasuk": 21667,
+      "avgKeluar": 75114,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 28,
+          "masuk": 260000,
+          "keluar": 1201820
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 1,
+      "category": "SEMUA",
+      "totalCount": 444,
+      "countMasuk": 210,
+      "countKeluar": 234,
+      "avgMasuk": 187593,
+      "avgKeluar": 96487,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 428,
+          "masuk": 39129479.6,
+          "keluar": 20171031.91
+        },
+        {
+          "name": "PKK",
+          "count": 16,
+          "masuk": 265000,
+          "keluar": 2406855
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 1,
+      "category": "UTAMA",
+      "totalCount": 428,
+      "countMasuk": 204,
+      "countKeluar": 224,
+      "avgMasuk": 191811,
+      "avgKeluar": 90049,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 428,
+          "masuk": 39129479.6,
+          "keluar": 20171031.91
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 1,
+      "category": "PKK",
+      "totalCount": 16,
+      "countMasuk": 6,
+      "countKeluar": 10,
+      "avgMasuk": 44167,
+      "avgKeluar": 240686,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 16,
+          "masuk": 265000,
+          "keluar": 2406855
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "category": "SEMUA",
+      "totalCount": 309,
+      "countMasuk": 143,
+      "countKeluar": 166,
+      "avgMasuk": 206476,
+      "avgKeluar": 104675,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 303,
+          "masuk": 29496000,
+          "keluar": 16775869
+        },
+        {
+          "name": "PKK",
+          "count": 6,
+          "masuk": 30000,
+          "keluar": 600210
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "category": "UTAMA",
+      "totalCount": 303,
+      "countMasuk": 141,
+      "countKeluar": 162,
+      "avgMasuk": 209191,
+      "avgKeluar": 103555,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 303,
+          "masuk": 29496000,
+          "keluar": 16775869
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 2,
+      "category": "PKK",
+      "totalCount": 6,
+      "countMasuk": 2,
+      "countKeluar": 4,
+      "avgMasuk": 15000,
+      "avgKeluar": 150053,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 6,
+          "masuk": 30000,
+          "keluar": 600210
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "category": "SEMUA",
+      "totalCount": 362,
+      "countMasuk": 168,
+      "countKeluar": 194,
+      "avgMasuk": 220708,
+      "avgKeluar": 140660,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 352,
+          "masuk": 36963973.37,
+          "keluar": 26687256.67
+        },
+        {
+          "name": "PKK",
+          "count": 10,
+          "masuk": 115000,
+          "keluar": 600805
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "category": "UTAMA",
+      "totalCount": 352,
+      "countMasuk": 164,
+      "countKeluar": 188,
+      "avgMasuk": 225390,
+      "avgKeluar": 141953,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 352,
+          "masuk": 36963973.37,
+          "keluar": 26687256.67
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "category": "PKK",
+      "totalCount": 10,
+      "countMasuk": 4,
+      "countKeluar": 6,
+      "avgMasuk": 28750,
+      "avgKeluar": 100134,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 10,
+          "masuk": 115000,
+          "keluar": 600805
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 4,
+      "category": "SEMUA",
+      "totalCount": 378,
+      "countMasuk": 175,
+      "countKeluar": 203,
+      "avgMasuk": 232749,
+      "avgKeluar": 166464,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 373,
+          "masuk": 40730999.05,
+          "keluar": 32292259.81
+        },
+        {
+          "name": "PKK",
+          "count": 5,
+          "masuk": 0,
+          "keluar": 1500000
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 4,
+      "category": "UTAMA",
+      "totalCount": 373,
+      "countMasuk": 175,
+      "countKeluar": 198,
+      "avgMasuk": 232749,
+      "avgKeluar": 163092,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 373,
+          "masuk": 40730999.05,
+          "keluar": 32292259.81
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 4,
+      "category": "PKK",
+      "totalCount": 5,
+      "countMasuk": 0,
+      "countKeluar": 5,
+      "avgMasuk": 0,
+      "avgKeluar": 300000,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 5,
+          "masuk": 0,
+          "keluar": 1500000
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 5,
+      "category": "SEMUA",
+      "totalCount": 393,
+      "countMasuk": 175,
+      "countKeluar": 218,
+      "avgMasuk": 217076,
+      "avgKeluar": 142062,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 392,
+          "masuk": 37988375,
+          "keluar": 30569429.06
+        },
+        {
+          "name": "PKK",
+          "count": 1,
+          "masuk": 0,
+          "keluar": 400000
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 5,
+      "category": "UTAMA",
+      "totalCount": 392,
+      "countMasuk": 175,
+      "countKeluar": 217,
+      "avgMasuk": 217076,
+      "avgKeluar": 140873,
+      "categorySummary": [
+        {
+          "name": "UTAMA",
+          "count": 392,
+          "masuk": 37988375,
+          "keluar": 30569429.06
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 5,
+      "category": "PKK",
+      "totalCount": 1,
+      "countMasuk": 0,
+      "countKeluar": 1,
+      "avgMasuk": 0,
+      "avgKeluar": 400000,
+      "categorySummary": [
+        {
+          "name": "PKK",
+          "count": 1,
+          "masuk": 0,
+          "keluar": 400000
+        }
+      ]
+    }
+  ]
+}
