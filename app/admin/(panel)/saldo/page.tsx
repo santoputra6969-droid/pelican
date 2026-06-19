@@ -1,6 +1,7 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminTransaksiTable } from "@/components/admin/AdminTransaksiTable";
 import { AddTransaksiForm } from "@/components/admin/AddTransaksiForm";
+import { PendingSaldoReview } from "@/components/admin/PendingSaldoReview";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
 import { Icon } from "@/components/Icon";
@@ -8,11 +9,27 @@ import { Icon } from "@/components/Icon";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSaldoPage() {
-  const [transactions, balance, masukUtama, keluarUtama, masukPkk, keluarPkk] =
+  const [transactions, pendingPaymentsRaw, houses, balance, masukUtama, keluarUtama, masukPkk, keluarPkk] =
     await Promise.all([
       prisma.transaction.findMany({
         orderBy: { createdAt: "desc" },
         take: 200,
+      }),
+      prisma.payment.findMany({
+        where: { status: "REVIEW" },
+        orderBy: { settledAt: "desc" },
+        take: 100,
+        select: {
+          id: true,
+          orderId: true,
+          amount: true,
+          paymentType: true,
+          settledAt: true,
+          houseId: true,
+        },
+      }),
+      prisma.house.findMany({
+        select: { id: true, block: true, no: true, ownerName: true },
       }),
       prisma.balance.findFirst({ orderBy: { id: "asc" } }),
       prisma.transaction.aggregate({
@@ -33,12 +50,24 @@ export default async function AdminSaldoPage() {
       }),
     ]);
 
+  const houseMap = new Map(houses.map((house) => [house.id, house]));
+  const pendingPayments = pendingPaymentsRaw.map((payment) => ({
+    ...payment,
+    settledAt: payment.settledAt ? payment.settledAt.toISOString() : null,
+    house: payment.houseId ? houseMap.get(payment.houseId) ?? null : null,
+  }));
+
   return (
     <div className="px-5 py-6 lg:px-8">
       <AdminPageHeader
         title="Kelola Saldo"
         subtitle="Ringkasan saldo kas utama, kas PKK, dan mutasi terbaru"
-        action={<AddTransaksiForm />}
+        action={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <PendingSaldoReview payments={pendingPayments} />
+            <AddTransaksiForm />
+          </div>
+        }
       />
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -65,6 +94,13 @@ export default async function AdminSaldoPage() {
           <p className="text-xs text-ink-faint">Mutasi kas PKK</p>
           <p className="mt-2 text-sm font-semibold text-ink">Masuk {formatRupiah(masukPkk._sum.amount ?? 0)}</p>
           <p className="text-sm font-semibold text-ink">Keluar {formatRupiah(keluarPkk._sum.amount ?? 0)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="text-xs text-ink-faint">Saldo pending review</p>
+          <p className="mt-2 text-lg font-extrabold text-ink">
+            {formatRupiah(pendingPayments.reduce((total, payment) => total + payment.amount, 0))}
+          </p>
+          <p className="text-xs text-ink-faint">{pendingPayments.length} transaksi menunggu konfirmasi</p>
         </div>
       </div>
 

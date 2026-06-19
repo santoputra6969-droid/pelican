@@ -280,15 +280,26 @@ export async function settlePayment(
  */
 export async function markPaymentStatus(
   orderId: string,
-  status: "EXPIRED" | "FAILED" | "CANCEL"
+  status: "REVIEW" | "EXPIRED" | "FAILED" | "CANCEL",
+  info?: { paymentType?: string | null; settlementTransactionId?: string | null }
 ): Promise<void> {
   const payment = await prisma.payment.findUnique({ where: { orderId } });
   if (!payment || payment.status === "PAID") return;
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { status },
+    data: {
+      status,
+      ...(status === "REVIEW"
+        ? {
+            paymentType: info?.paymentType ?? payment.paymentType,
+            settledAt: new Date(),
+          }
+        : {}),
+    },
   });
   revalidatePath("/bayar-ipl");
+  revalidatePath("/admin/saldo");
+  revalidatePath("/admin");
 }
 
 /** Label periode untuk ringkasan (single vs banyak). */

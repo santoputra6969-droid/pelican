@@ -194,6 +194,68 @@ export function BukuKasReport({
       });
     }
 
+    doc.addPage();
+    const recapStartY = drawHeader(
+      "RINCIAN / TOTAL TRANSAKSI",
+      `Rekap seluruh transaksi periode ${formatPeriod(year, month)}`
+    );
+
+    autoTable(doc, {
+      startY: recapStartY,
+      margin: { left: marginX, right: marginX },
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 4 },
+      head: [["Kategori", "Jumlah Trx", "Masuk", "Keluar", "Net"]],
+      body: [
+        [
+          "IPL",
+          String(report.summary.IPL.count),
+          formatCurrencyCell(report.summary.IPL.masuk),
+          formatCurrencyCell(report.summary.IPL.fee),
+          formatCurrencyCell(report.summary.IPL.masuk - report.summary.IPL.fee),
+        ],
+        [
+          "KAS",
+          String(report.summary.KAS.count),
+          formatCurrencyCell(report.summary.KAS.masuk),
+          formatCurrencyCell(report.summary.KAS.fee),
+          formatCurrencyCell(report.summary.KAS.masuk - report.summary.KAS.fee),
+        ],
+        [
+          "PKK",
+          String(report.summary.PKK.count),
+          formatCurrencyCell(report.summary.PKK.masuk),
+          formatCurrencyCell(report.summary.PKK.fee),
+          formatCurrencyCell(report.summary.PKK.masuk - report.summary.PKK.fee),
+        ],
+        [
+          "Lainnya",
+          String(report.summary.LAINNYA.count),
+          formatCurrencyCell(report.summary.LAINNYA.masuk),
+          formatCurrencyCell(report.summary.LAINNYA.keluar),
+          formatCurrencyCell(report.summary.LAINNYA.masuk - report.summary.LAINNYA.keluar),
+        ],
+      ],
+    });
+
+    autoTable(doc, {
+      startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
+        ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12)
+        : recapStartY + 90,
+      margin: { left: marginX, right: marginX },
+      theme: "grid",
+      headStyles: { fillColor: [229, 231, 235], fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 4 },
+      head: [["TOTAL", "UTAMA", "PKK", "SELISIH"]],
+      body: [[
+        `Jumlah ${rows.length} transaksi`,
+        formatCurrencyCell(report.totals.masukUtama),
+        formatCurrencyCell(report.totals.masukPkk),
+        formatCurrencyCell(report.totals.net),
+      ]],
+    });
+
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i += 1) {
       doc.setPage(i);

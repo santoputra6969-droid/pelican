@@ -8,6 +8,7 @@ import { HOUSE_COOKIE } from "@/lib/session";
 import { formatPeriod } from "@/lib/format";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { getCommunityFeeStatusForHouse } from "@/lib/communityFees";
+import { saveUploadedFile } from "@/lib/files";
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -629,6 +630,14 @@ export async function createComplaint(
   }
 
   try {
+    const image = await saveUploadedFile(formData.get("imageFile"), {
+      kind: "LAMPIRAN",
+      createdBy: houseLabel ?? ownerName ?? "WARGA",
+    });
+    if (image && image.ok === false) {
+      return { ok: false, message: image.message };
+    }
+
     await prisma.complaint.create({
       data: {
         houseId: Number.isFinite(houseId) && houseId > 0 ? houseId : null,
@@ -636,6 +645,7 @@ export async function createComplaint(
         ownerName,
         category,
         message,
+        image: image?.ok ? image.id : null,
       },
     });
     revalidatePath("/pengaduan");

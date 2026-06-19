@@ -29,7 +29,12 @@ export function PengaduanForm() {
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="card space-y-4 p-5">
+    <form
+      ref={formRef}
+      action={formAction}
+      encType="multipart/form-data"
+      className="card space-y-4 p-5"
+    >
       <input type="hidden" name="category" value={category} />
 
       <div>
@@ -69,6 +74,13 @@ export function PengaduanForm() {
           placeholder="Ceritakan keluhan atau masukan Anda untuk pengurus..."
           className="input resize-none"
         />
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
+          Upload Gambar Bukti (opsional)
+        </label>
+        <input name="imageFile" type="file" accept="image/*" className="input-file" />
       </div>
 
       {state && !state.ok && (

@@ -51,6 +51,7 @@ export default async function AdminPengaduanPage() {
           ownerName: c.ownerName,
           category: c.category,
           message: c.message,
+          image: c.image,
           status: c.status,
           reply: c.reply,
           repliedBy: c.repliedBy,

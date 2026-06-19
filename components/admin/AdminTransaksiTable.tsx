@@ -87,8 +87,39 @@ export function AdminTransaksiTable({
       .replace(/'/g, "&#039;");
   }
 
+  function buildSummaryRows() {
+    const byCategory = new Map<
+      string,
+      { count: number; masuk: number; keluar: number }
+    >();
+
+    for (const row of filtered) {
+      const current = byCategory.get(row.category) ?? {
+        count: 0,
+        masuk: 0,
+        keluar: 0,
+      };
+      current.count += 1;
+      if (row.mutation === "DEBIT") {
+        current.masuk += row.amount;
+      } else {
+        current.keluar += row.amount;
+      }
+      byCategory.set(row.category, current);
+    }
+
+    return Array.from(byCategory.entries())
+      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
+      .map(([category, value]) => ({
+        category,
+        ...value,
+        net: value.masuk - value.keluar,
+      }));
+  }
+
   function buildPrintHtml() {
     const kopUrl = `${window.location.origin}/kop-surat.png`;
+    const summaryRows = buildSummaryRows();
     const rowsHtml = filtered
       .map((t, index) => {
         const masuk = t.mutation === "DEBIT";
@@ -173,6 +204,19 @@ export function AdminTransaksiTable({
               margin-top: 2px;
               font-size: 12px;
             }
+            .recap {
+              margin-top: 12px;
+              page-break-inside: avoid;
+            }
+            .recap h2 {
+              margin: 0 0 6px;
+              font-size: 12px;
+            }
+            .recap .note {
+              margin: 4px 0 0;
+              font-size: 9px;
+              color: #6b7280;
+            }
             .label {
               color: #6b7280;
             }
@@ -216,6 +260,13 @@ export function AdminTransaksiTable({
             .sign .space {
               height: 18mm;
             }
+            .recap-table thead th {
+              background: #dbeafe;
+            }
+            .recap-total {
+              background: #f3f4f6;
+              font-weight: 700;
+            }
           </style>
         </head>
         <body>
@@ -245,6 +296,44 @@ export function AdminTransaksiTable({
                 ${rowsHtml}
               </tbody>
             </table>
+
+            <div class="recap">
+              <h2>RINCIAN / TOTAL TRANSAKSI</h2>
+              <table class="recap-table">
+                <thead>
+                  <tr>
+                    <th>Jenis</th>
+                    <th class="tc">Jumlah Trx</th>
+                    <th class="tr">Masuk</th>
+                    <th class="tr">Keluar</th>
+                    <th class="tr">Net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryRows
+                    .map(
+                      (row) => `
+                        <tr>
+                          <td>${escapeHtml(row.category)}</td>
+                          <td class="tc nw">${row.count}</td>
+                          <td class="tr nw">${escapeHtml(formatRupiah(row.masuk))}</td>
+                          <td class="tr nw">${escapeHtml(formatRupiah(row.keluar))}</td>
+                          <td class="tr nw">${escapeHtml(formatRupiah(row.net))}</td>
+                        </tr>
+                      `
+                    )
+                    .join("")}
+                  <tr class="recap-total">
+                    <td>TOTAL</td>
+                    <td class="tc nw">${filtered.length}</td>
+                    <td class="tr nw">${escapeHtml(formatRupiah(totalMasuk))}</td>
+                    <td class="tr nw">${escapeHtml(formatRupiah(totalKeluar))}</td>
+                    <td class="tr nw">${escapeHtml(formatRupiah(totalMasuk - totalKeluar))}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="note">Ringkasan di atas merangkum seluruh transaksi yang tercetak pada laporan ini.</p>
+            </div>
 
             <div class="footer">
               <div class="sign">

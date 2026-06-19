@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyNotificationSignature } from "@/lib/midtrans";
-import { settlePayment, markPaymentStatus } from "@/lib/payments";
+import { markPaymentStatus } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +30,6 @@ export async function POST(req: Request) {
     signature_key,
     transaction_status,
     fraud_status,
-    payment_type,
-    transaction_id,
   } = body;
 
   if (!order_id || !status_code || !gross_amount || !signature_key) {
@@ -56,9 +54,9 @@ export async function POST(req: Request) {
       status === "settlement" ||
       (status === "capture" && fraud_status === "accept")
     ) {
-      await settlePayment(order_id, {
-        paymentType: payment_type ?? null,
-        settlementTransactionId: transaction_id ?? null,
+      await markPaymentStatus(order_id, "REVIEW", {
+        paymentType: body.payment_type ?? null,
+        settlementTransactionId: body.transaction_id ?? null,
       });
     } else if (status === "expire") {
       await markPaymentStatus(order_id, "EXPIRED");

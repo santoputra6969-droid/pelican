@@ -12,6 +12,7 @@ type Row = {
   ownerName: string | null;
   category: string;
   message: string;
+  image: string | null;
   status: string;
   reply: string | null;
   repliedBy: string | null;
@@ -101,6 +102,18 @@ export function AdminPengaduanTable({ complaints }: { complaints: Row[] }) {
               </div>
 
               <p className="mt-2 text-sm text-ink">{c.message}</p>
+
+              {c.image && (
+                <a
+                  href={`/admin/files/${c.image}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-pelican-600 hover:underline"
+                >
+                  <Icon name="receipt" size={14} />
+                  Lihat lampiran gambar
+                </a>
+              )}
 
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-faint">
                 <span className="font-semibold text-ink-soft">

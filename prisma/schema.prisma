@@ -143,6 +143,7 @@ model Complaint {
   ownerName  String?
   category   String   @default("UMUM") // KEAMANAN | KEBERSIHAN | FASILITAS | LINGKUNGAN | UMUM
   message    String
+  image      String?
   status     String   @default("BARU") // BARU | DIPROSES | SELESAI
   reply      String?
   repliedBy  String?

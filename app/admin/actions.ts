@@ -9,6 +9,7 @@ import { ADMIN_COOKIE, signSession } from "@/lib/auth";
 import { requireAdmin } from "@/lib/session";
 import { formatRupiah } from "@/lib/format";
 import { saveUploadedFile, deleteStoredFile } from "@/lib/files";
+import { settlePayment } from "@/lib/payments";
 
 const ADMIN_COOKIE_OPTS = {
   httpOnly: true,
@@ -336,6 +337,48 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
     ok: true,
     message: `Transaksi ${kind === "MASUK" ? "pemasukan" : "pengeluaran"} dicatat: ${formatRupiah(amount)}.`,
   };
+}
+
+export async function confirmPendingPayments(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const ids = formData
+    .getAll("paymentIds")
+    .map((value) => Number(String(value)))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (ids.length === 0) {
+    return { ok: false, message: "Pilih minimal 1 saldo pending untuk dikonfirmasi." };
+  }
+
+  let confirmed = 0;
+  let skipped = 0;
+
+  for (const id of ids) {
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment || payment.status !== "REVIEW") {
+      skipped += 1;
+      continue;
+    }
+
+    const result = await settlePayment(payment.orderId, {
+      paymentType: payment.paymentType ?? null,
+    });
+    if (result.ok) {
+      confirmed += 1;
+    } else {
+      skipped += 1;
+    }
+  }
+
+  revalidatePath("/admin/saldo");
+  revalidatePath("/admin");
+
+  if (confirmed === 0) {
+    return { ok: false, message: "Tidak ada saldo pending yang berhasil dikonfirmasi." };
+  }
+
+  const suffix = skipped > 0 ? `, ${skipped} dilewati` : "";
+  return { ok: true, message: `${confirmed} saldo pending berhasil dikonfirmasi${suffix}.` };
 }
 
 /* ------------------------------ Information ------------------------------ */
