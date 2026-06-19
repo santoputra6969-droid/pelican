@@ -39,7 +39,7 @@ export function BukuKasReport({
   saldoAwal,
   totalMasuk,
   totalKeluar,
-  legacyTotals,
+  legacyBukuKas,
   rows,
 }: {
   year: number;
@@ -47,13 +47,22 @@ export function BukuKasReport({
   saldoAwal: number;
   totalMasuk: number;
   totalKeluar: number;
-  legacyTotals?: {
-    masukSemua: number;
-    keluarSemua: number;
-    masukUtama: number | null;
-    keluarUtama: number | null;
-    masukPkk: number | null;
-    keluarPkk: number | null;
+  legacyBukuKas?: {
+    ipl: { count: number; amount: number; fee: number };
+    kas: { count: number; amount: number; fee: number };
+    pkk: { count: number; amount: number; fee: number };
+    lainnya: { count: number; masuk: number; keluar: number };
+    totals: {
+      masuk: number;
+      masukUtama: number;
+      masukPkk: number;
+      keluar: number;
+      keluarUtama: number;
+      keluarPkk: number;
+      net: number;
+      netUtama: number;
+      netPkk: number;
+    };
   } | null;
   rows: Row[];
 }) {
@@ -64,8 +73,8 @@ export function BukuKasReport({
   const [detailBucket, setDetailBucket] = useState<Bucket>("IPL");
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
-  const effectiveMasuk = legacyTotals?.masukSemua ?? totalMasuk;
-  const effectiveKeluar = legacyTotals?.keluarSemua ?? totalKeluar;
+  const effectiveMasuk = legacyBukuKas?.totals.masuk ?? totalMasuk;
+  const effectiveKeluar = legacyBukuKas?.totals.keluar ?? totalKeluar;
   const saldoAkhir = saldoAwal + effectiveMasuk - effectiveKeluar;
 
   async function printPdf() {
@@ -342,14 +351,37 @@ export function BukuKasReport({
       },
     };
 
+    if (legacyBukuKas) {
+      summary.IPL = {
+        count: legacyBukuKas.ipl.count,
+        masuk: legacyBukuKas.ipl.amount,
+        fee: legacyBukuKas.ipl.fee,
+      };
+      summary.KAS = {
+        count: legacyBukuKas.kas.count,
+        masuk: legacyBukuKas.kas.amount,
+        fee: legacyBukuKas.kas.fee,
+      };
+      summary.PKK = {
+        count: legacyBukuKas.pkk.count,
+        masuk: legacyBukuKas.pkk.amount,
+        fee: legacyBukuKas.pkk.fee,
+      };
+      summary.LAINNYA = {
+        count: legacyBukuKas.lainnya.count,
+        masuk: legacyBukuKas.lainnya.masuk,
+        keluar: legacyBukuKas.lainnya.keluar,
+      };
+    }
+
     const totals = {
       masuk: effectiveMasuk,
       keluar: effectiveKeluar,
       net: effectiveMasuk - effectiveKeluar,
-      masukUtama: legacyTotals?.masukUtama ?? sumByCategory(rows, "UTAMA", "DEBIT"),
-      masukPkk: legacyTotals?.masukPkk ?? sumByCategory(rows, "PKK", "DEBIT"),
-      keluarUtama: legacyTotals?.keluarUtama ?? sumByCategory(rows, "UTAMA", "KREDIT"),
-      keluarPkk: legacyTotals?.keluarPkk ?? sumByCategory(rows, "PKK", "KREDIT"),
+      masukUtama: legacyBukuKas?.totals.masukUtama ?? sumByCategory(rows, "UTAMA", "DEBIT"),
+      masukPkk: legacyBukuKas?.totals.masukPkk ?? sumByCategory(rows, "PKK", "DEBIT"),
+      keluarUtama: legacyBukuKas?.totals.keluarUtama ?? sumByCategory(rows, "UTAMA", "KREDIT"),
+      keluarPkk: legacyBukuKas?.totals.keluarPkk ?? sumByCategory(rows, "PKK", "KREDIT"),
     };
 
     const detailRowsByBucket: Record<Bucket, DetailItem[]> = {
@@ -368,7 +400,7 @@ export function BukuKasReport({
     };
 
     return { summary, totals, detailRowsByBucket };
-  }, [rows, effectiveMasuk, effectiveKeluar, legacyTotals]);
+  }, [rows, effectiveMasuk, effectiveKeluar, legacyBukuKas]);
 
   const currentDetailRows = report.detailRowsByBucket[detailBucket];
 
