@@ -1,6 +1,7 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { TransaksiJournalReport } from "@/components/admin/TransaksiJournalReport";
 import { MONTHS } from "@/lib/format";
+import { getLegacyMonthlyRow, getLegacyMonthlyRows } from "@/lib/legacyMonthlyReport";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -102,8 +103,28 @@ export default async function AdminTransaksiReportPage({
     }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
-  const avgMasuk = transactions.length > 0 ? Math.round(totalMasuk / transactions.length) : 0;
-  const avgKeluar = transactions.length > 0 ? Math.round(totalKeluar / transactions.length) : 0;
+  const legacySelected = getLegacyMonthlyRow(year, month, category);
+  const legacyRowsThisMonth = getLegacyMonthlyRows(year, month);
+
+  const effectiveMasuk = legacySelected?.masuk ?? totalMasuk;
+  const effectiveKeluar = legacySelected?.keluar ?? totalKeluar;
+
+  const effectiveCategorySummary =
+    category === "SEMUA" && legacyRowsThisMonth.length > 0
+      ? categorySummary.map((row) => {
+          const legacy = legacyRowsThisMonth.find((legacyRow) => legacyRow.category === row.name);
+          if (!legacy) return row;
+          return {
+            ...row,
+            masuk: legacy.masuk,
+            keluar: legacy.keluar,
+            net: legacy.masuk - legacy.keluar,
+          };
+        })
+      : categorySummary;
+
+  const avgMasuk = transactions.length > 0 ? Math.round(effectiveMasuk / transactions.length) : 0;
+  const avgKeluar = transactions.length > 0 ? Math.round(effectiveKeluar / transactions.length) : 0;
 
   return (
     <div className="px-5 py-6 lg:px-8">
@@ -117,12 +138,12 @@ export default async function AdminTransaksiReportPage({
         month={month}
         category={category}
         daily={daily}
-        totalMasuk={totalMasuk}
-        totalKeluar={totalKeluar}
+        totalMasuk={effectiveMasuk}
+        totalKeluar={effectiveKeluar}
         totalCount={transactions.length}
         avgMasuk={avgMasuk}
         avgKeluar={avgKeluar}
-        categorySummary={categorySummary}
+        categorySummary={effectiveCategorySummary}
       />
     </div>
   );

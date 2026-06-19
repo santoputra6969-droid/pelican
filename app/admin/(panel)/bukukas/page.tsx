@@ -1,5 +1,6 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { BukuKasReport } from "@/components/admin/BukuKasReport";
+import { getLegacyMonthlyRows } from "@/lib/legacyMonthlyReport";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,23 @@ export default async function AdminBukuKasPage({
     .filter((t) => t.mutation !== "DEBIT")
     .reduce((s, t) => s + t.amount, 0);
 
+  const legacyRows = getLegacyMonthlyRows(year, month);
+  const legacySemua = legacyRows.find((row) => row.category === "SEMUA");
+  const legacyUtama = legacyRows.find((row) => row.category === "UTAMA");
+  const legacyPkk = legacyRows.find((row) => row.category === "PKK");
+
+  const legacyTotals =
+    legacyRows.length > 0
+      ? {
+          masukSemua: legacySemua?.masuk ?? totalMasuk,
+          keluarSemua: legacySemua?.keluar ?? totalKeluar,
+          masukUtama: legacyUtama?.masuk ?? null,
+          keluarUtama: legacyUtama?.keluar ?? null,
+          masukPkk: legacyPkk?.masuk ?? null,
+          keluarPkk: legacyPkk?.keluar ?? null,
+        }
+      : null;
+
   return (
     <div className="bukukas-page px-5 py-6 lg:px-8">
       <div className="print:hidden">
@@ -54,6 +72,7 @@ export default async function AdminBukuKasPage({
         saldoAwal={saldoAwal}
         totalMasuk={totalMasuk}
         totalKeluar={totalKeluar}
+        legacyTotals={legacyTotals}
         rows={txs.map((t) => ({
           id: t.id,
           createdAt: t.createdAt.toISOString(),

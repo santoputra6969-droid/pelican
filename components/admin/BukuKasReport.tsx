@@ -39,6 +39,7 @@ export function BukuKasReport({
   saldoAwal,
   totalMasuk,
   totalKeluar,
+  legacyTotals,
   rows,
 }: {
   year: number;
@@ -46,6 +47,14 @@ export function BukuKasReport({
   saldoAwal: number;
   totalMasuk: number;
   totalKeluar: number;
+  legacyTotals?: {
+    masukSemua: number;
+    keluarSemua: number;
+    masukUtama: number | null;
+    keluarUtama: number | null;
+    masukPkk: number | null;
+    keluarPkk: number | null;
+  } | null;
   rows: Row[];
 }) {
   const router = useRouter();
@@ -55,7 +64,9 @@ export function BukuKasReport({
   const [detailBucket, setDetailBucket] = useState<Bucket>("IPL");
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
-  const saldoAkhir = saldoAwal + totalMasuk - totalKeluar;
+  const effectiveMasuk = legacyTotals?.masukSemua ?? totalMasuk;
+  const effectiveKeluar = legacyTotals?.keluarSemua ?? totalKeluar;
+  const saldoAkhir = saldoAwal + effectiveMasuk - effectiveKeluar;
 
   async function printPdf() {
     if (typeof window === "undefined") return;
@@ -292,7 +303,7 @@ export function BukuKasReport({
     const summary = [
       "",
       `Saldo Awal;;;;${saldoAwal};`,
-      `Total;;;;${totalMasuk};${totalKeluar}`,
+      `Total;;;;${effectiveMasuk};${effectiveKeluar}`,
       `Saldo Akhir;;;;${saldoAkhir};`,
     ];
 
@@ -332,13 +343,13 @@ export function BukuKasReport({
     };
 
     const totals = {
-      masuk: totalMasuk,
-      keluar: totalKeluar,
-      net: totalMasuk - totalKeluar,
-      masukUtama: sumByCategory(rows, "UTAMA", "DEBIT"),
-      masukPkk: sumByCategory(rows, "PKK", "DEBIT"),
-      keluarUtama: sumByCategory(rows, "UTAMA", "KREDIT"),
-      keluarPkk: sumByCategory(rows, "PKK", "KREDIT"),
+      masuk: effectiveMasuk,
+      keluar: effectiveKeluar,
+      net: effectiveMasuk - effectiveKeluar,
+      masukUtama: legacyTotals?.masukUtama ?? sumByCategory(rows, "UTAMA", "DEBIT"),
+      masukPkk: legacyTotals?.masukPkk ?? sumByCategory(rows, "PKK", "DEBIT"),
+      keluarUtama: legacyTotals?.keluarUtama ?? sumByCategory(rows, "UTAMA", "KREDIT"),
+      keluarPkk: legacyTotals?.keluarPkk ?? sumByCategory(rows, "PKK", "KREDIT"),
     };
 
     const detailRowsByBucket: Record<Bucket, DetailItem[]> = {
@@ -357,7 +368,7 @@ export function BukuKasReport({
     };
 
     return { summary, totals, detailRowsByBucket };
-  }, [rows, totalMasuk, totalKeluar]);
+  }, [rows, effectiveMasuk, effectiveKeluar, legacyTotals]);
 
   const currentDetailRows = report.detailRowsByBucket[detailBucket];
 

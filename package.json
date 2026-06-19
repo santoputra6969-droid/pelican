@@ -10,7 +10,9 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "scrape:legacy": "node scripts/scrape-pelican.mjs",
+    "db:sync-legacy": "tsx scripts/sync-legacy-data.ts"
   },
   "engines": {
     "node": ">=20"
