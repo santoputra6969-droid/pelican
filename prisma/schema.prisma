@@ -59,6 +59,27 @@ model Bill {
   @@index([status])
 }
 
+// Pemutihan tagihan (write-off). Mencatat periode tunggakan yang "diputihkan"
+// admin setelah pencocokan offline (mis. warga sudah bayar ke developer sebelum
+// serah terima ke RT). Berlaku untuk IPL, KAS, & PKK. Periode yang punya record
+// di sini dikeluarkan dari perhitungan tunggakan/piutang, tapi tetap tersimpan
+// untuk audit dan bisa dibatalkan.
+model FeeWaiver {
+  id        Int      @id @default(autoincrement())
+  feeType   String // IPL | KAS | PKK
+  houseId   Int
+  year      Int
+  month     Int
+  amount    Int      @default(0) // snapshot nominal yang diputihkan
+  reason    String // alasan pemutihan (wajib)
+  waivedBy  String? // username admin yang memutihkan
+  createdAt DateTime @default(now())
+
+  @@unique([feeType, houseId, year, month])
+  @@index([houseId])
+  @@index([feeType])
+}
+
 // Buku kas / jurnal transaksi komunitas (pemasukan & pengeluaran)
 model Transaction {
   id           Int      @id @default(autoincrement())

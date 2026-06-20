@@ -47,7 +47,7 @@ export function communityPeriodKey(year: number, month: number) {
 }
 
 async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
-  const [houses, txs] = await Promise.all([
+  const [houses, txs, waivers] = await Promise.all([
     prisma.house.findMany({
       where:
         feeType === "KAS"
@@ -73,6 +73,10 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
       take: 10000,
       orderBy: { createdAt: "desc" },
     }),
+    prisma.feeWaiver.findMany({
+      where: { feeType },
+      select: { houseId: true, year: true, month: true },
+    }),
   ]);
 
   const paidByHouse = new Map<string, Set<string>>();
@@ -84,6 +88,18 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
     if (!paidByHouse.has(houseKey)) paidByHouse.set(houseKey, new Set<string>());
     const set = paidByHouse.get(houseKey)!;
     for (const p of periods) set.add(communityPeriodKey(p.year, p.month));
+  }
+
+  // Periode yang diputihkan (write-off) diperlakukan seperti sudah lunas.
+  const houseKeyById = new Map<number, string>();
+  for (const h of houses) {
+    houseKeyById.set(h.id, `${h.block.toUpperCase()}::${h.no.toUpperCase()}`);
+  }
+  for (const w of waivers) {
+    const houseKey = houseKeyById.get(w.houseId);
+    if (!houseKey) continue;
+    if (!paidByHouse.has(houseKey)) paidByHouse.set(houseKey, new Set<string>());
+    paidByHouse.get(houseKey)!.add(communityPeriodKey(w.year, w.month));
   }
 
   const paidYears = txs

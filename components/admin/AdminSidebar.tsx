@@ -16,6 +16,7 @@ const nav: { label: string; href: string; icon: IconName }[] = [
   { label: "Tunggakan", href: "/admin/tunggakan", icon: "swap" },
   { label: "Tunggakan Kas", href: "/admin/tunggakan-kas", icon: "scan" },
   { label: "Tunggakan PKK", href: "/admin/tunggakan-pkk", icon: "scan" },
+  { label: "Pemutihan", href: "/admin/pemutihan", icon: "shield" },
   { label: "Sistag IPL", href: "/admin/sistag-ipl", icon: "arrow-right" },
   { label: "Sistag Kas", href: "/admin/sistag-kas", icon: "arrow-right" },
   { label: "Sistag PKK", href: "/admin/sistag-pkk", icon: "arrow-right" },

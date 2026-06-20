@@ -223,6 +223,99 @@ export async function generateBills(formData: FormData): Promise<ActionResult> {
   };
 }
 
+// ---- Pemutihan tagihan (write-off) ----
+
+const WAIVE_PATHS = [
+  "/admin/tunggakan",
+  "/admin/tunggakan-kas",
+  "/admin/tunggakan-pkk",
+  "/admin/pemutihan",
+  "/admin",
+];
+
+type WaiveItem = { houseId: number; year: number; month: number; amount: number };
+
+export async function waiveFees(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const feeType = String(formData.get("feeType") ?? "").toUpperCase();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (feeType !== "IPL" && feeType !== "KAS" && feeType !== "PKK")
+    return { ok: false, message: "Jenis tagihan tidak valid." };
+  if (!reason)
+    return { ok: false, message: "Alasan pemutihan wajib diisi." };
+
+  let items: WaiveItem[];
+  try {
+    items = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return { ok: false, message: "Data periode tidak valid." };
+  }
+
+  const valid = (Array.isArray(items) ? items : []).filter(
+    (it) =>
+      Number.isInteger(it?.houseId) &&
+      it.houseId > 0 &&
+      Number.isInteger(it?.year) &&
+      Number.isInteger(it?.month) &&
+      it.month >= 1 &&
+      it.month <= 12
+  );
+
+  if (valid.length === 0)
+    return { ok: false, message: "Tidak ada periode yang dipilih." };
+
+  let count = 0;
+  for (const it of valid) {
+    await prisma.feeWaiver.upsert({
+      where: {
+        feeType_houseId_year_month: {
+          feeType,
+          houseId: it.houseId,
+          year: it.year,
+          month: it.month,
+        },
+      },
+      update: { reason, waivedBy: admin.username, amount: Math.max(0, Math.round(it.amount || 0)) },
+      create: {
+        feeType,
+        houseId: it.houseId,
+        year: it.year,
+        month: it.month,
+        amount: Math.max(0, Math.round(it.amount || 0)),
+        reason,
+        waivedBy: admin.username,
+      },
+    });
+    count++;
+  }
+
+  for (const p of WAIVE_PATHS) revalidatePath(p);
+  return {
+    ok: true,
+    message: `${count} periode tagihan ${feeType} berhasil diputihkan.`,
+  };
+}
+
+export async function unwaiveFees(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+
+  if (ids.length === 0)
+    return { ok: false, message: "Tidak ada pemutihan yang dipilih." };
+
+  const result = await prisma.feeWaiver.deleteMany({ where: { id: { in: ids } } });
+
+  for (const p of WAIVE_PATHS) revalidatePath(p);
+  return {
+    ok: true,
+    message: `${result.count} pemutihan dibatalkan, tagihan kembali aktif.`,
+  };
+}
+
 export async function setCommunityFeeConfig(
   formData: FormData
 ): Promise<ActionResult> {

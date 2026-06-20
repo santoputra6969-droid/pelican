@@ -43,15 +43,31 @@ export default async function AdminTunggakanPage({
     orderBy: { block: "asc" },
   });
 
-  const rows = houses.map((h) => ({
-    id: h.id,
-    block: h.block,
-    no: h.no,
-    ownerName: h.ownerName,
-    months: h.bills.length,
-    total: h.bills.reduce((s, b) => s + b.amount, 0),
-    bills: h.bills.map((b) => ({ year: b.year, month: b.month, amount: b.amount })),
-  }));
+  // Periode IPL yang telah diputihkan (write-off) → dikeluarkan dari tunggakan.
+  const waivers = await prisma.feeWaiver.findMany({
+    where: { feeType: "IPL" },
+    select: { houseId: true, year: true, month: true },
+  });
+  const waivedKeys = new Set(
+    waivers.map((w) => `${w.houseId}:${w.year}:${w.month}`)
+  );
+
+  const rows = houses
+    .map((h) => {
+      const bills = h.bills.filter(
+        (b) => !waivedKeys.has(`${h.id}:${b.year}:${b.month}`)
+      );
+      return {
+        id: h.id,
+        block: h.block,
+        no: h.no,
+        ownerName: h.ownerName,
+        months: bills.length,
+        total: bills.reduce((s, b) => s + b.amount, 0),
+        bills: bills.map((b) => ({ year: b.year, month: b.month, amount: b.amount })),
+      };
+    })
+    .filter((r) => r.bills.length > 0);
 
   return (
     <div className="px-5 py-6 print:px-0 print:py-0 lg:px-8">
