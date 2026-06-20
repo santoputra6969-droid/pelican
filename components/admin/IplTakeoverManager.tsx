@@ -234,7 +234,7 @@ export function IplTakeoverManager({
               type="number"
               inputMode="numeric"
               min={1}
-              step={1000}
+              step={1}
               value={total}
               onChange={(e) => setTotal(e.target.value)}
               required
@@ -364,7 +364,7 @@ export function IplTakeoverManager({
                           inputMode="numeric"
                           min={minCash}
                           max={r.remaining}
-                          step={1000}
+                          step={1}
                           defaultValue={minCash}
                           required
                           className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm outline-none focus:border-emerald-400"

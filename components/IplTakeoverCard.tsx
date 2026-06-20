@@ -149,7 +149,7 @@ export function IplTakeoverCard({
                     inputMode="numeric"
                     min={minAllowed}
                     max={remaining}
-                    step={1000}
+                    step={1}
                     value={Number.isFinite(amount) ? amount : ""}
                     onChange={(e) => setAmount(Math.round(Number(e.target.value)))}
                     className="w-full bg-transparent text-sm font-bold text-ink outline-none"
