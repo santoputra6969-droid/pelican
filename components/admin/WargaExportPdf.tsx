@@ -103,7 +103,15 @@ export function WargaExportPdf({
     if (kopDataUrl) {
       const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
       const kopWidth = pageWidth - marginX * 2;
-      const kopHeight = kopWidth / 6.4;
+      let kopHeight = kopWidth / 6.4;
+      try {
+        const props = doc.getImageProperties(kopDataUrl);
+        if (props?.width && props?.height) {
+          kopHeight = (props.height / props.width) * kopWidth;
+        }
+      } catch {
+        // fallback to default ratio
+      }
       doc.addImage(kopDataUrl, imageType, marginX, cursorY, kopWidth, kopHeight);
       cursorY += kopHeight + 6;
     } else {
