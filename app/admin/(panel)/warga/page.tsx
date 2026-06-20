@@ -59,6 +59,9 @@ export default async function AdminWargaPage() {
           payIpl: h.payIpl,
           iplAmount: h.iplAmount,
           unpaid: h._count.bills,
+          religion: h.religion,
+          sumFamily: h.sumFamily,
+          headPhone: h.headPhone,
         }))}
         residents={residents}
         members={members}

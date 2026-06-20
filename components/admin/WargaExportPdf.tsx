@@ -10,6 +10,9 @@ type House = {
   ownerName: string | null;
   occupied: boolean;
   occupiedByOwner: boolean;
+  religion?: string | null;
+  sumFamily?: string | null;
+  headPhone?: string | null;
 };
 
 type Resident = {
@@ -155,12 +158,12 @@ export function WargaExportPdf({
       `Ditempati Pengontrak: ${ditempatiPengontrak}`,
     ]);
 
-    // Statistik Agama
+    // Statistik Agama (prioritas data House legacy, fallback ke resident)
     const religionCount: Record<string, number> = {};
     let religionEmpty = 0;
     houses.forEach((h) => {
       const r = residentByHouse.get(h.id);
-      const code = parseReligion(r?.note ?? null);
+      const code = (parseReligion(r?.note ?? null) || h.religion || "").toUpperCase();
       if (code && RELIGION_LABELS[code]) {
         const label = RELIGION_LABELS[code];
         religionCount[label] = (religionCount[label] ?? 0) + 1;
@@ -175,13 +178,13 @@ export function WargaExportPdf({
 
     cursorY = drawStatSection(doc, marginX, cursorY, "Statistik Agama:", religionLines);
 
-    // Statistik Jumlah Keluarga
+    // Statistik Jumlah Keluarga (prioritas data House legacy, fallback ke resident)
     const familyCount: Record<string, number> = {};
     let familyEmpty = 0;
     houses.forEach((h) => {
       const r = residentByHouse.get(h.id);
-      const code = familyCode(r?.familyStatus ?? null);
-      if (code) {
+      const code = (familyCode(r?.familyStatus ?? null) || h.sumFamily || "").toUpperCase();
+      if (code && FAMILY_LABELS[code]) {
         familyCount[code] = (familyCount[code] ?? 0) + 1;
       } else {
         familyEmpty++;
@@ -209,9 +212,10 @@ export function WargaExportPdf({
           ? "Pemilik"
           : "Pengontrak";
       const name = resident?.name || house.ownerName || "-";
-      const phone = resident?.phone || "-";
-      const kk = familyCode(resident?.familyStatus ?? null) ?? "-";
-      const religion = parseReligion(resident?.note ?? null) || "-";
+      const phone = resident?.phone || house.headPhone || "-";
+      const kk = (familyCode(resident?.familyStatus ?? null) || house.sumFamily || "-").toUpperCase();
+      const religionCode = (parseReligion(resident?.note ?? null) || house.religion || "").toUpperCase();
+      const religion = RELIGION_LABELS[religionCode] || "-";
 
       return [
         String(idx + 1),

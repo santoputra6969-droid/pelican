@@ -30,6 +30,9 @@ model House {
   cashAmount      Int?
   payPkk          Boolean  @default(false)
   pkkAmount       Int?
+  religion        String? // ISLAM | KRISTEN | KATHOLIK | BUDDHA | HINDU | KHONGHUCU
+  sumFamily       String? // K0 | K1 | .. | TK | TK0 | .. (status jumlah keluarga)
+  headPhone       String? // handphone kepala keluarga (dari data legacy)
   createdAt       DateTime @default(now())
   bills           Bill[]
   residents       Resident[]

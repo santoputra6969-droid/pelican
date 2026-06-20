@@ -22,6 +22,32 @@ const toFloat = (v: unknown, fallback = 0) => {
 const date = (v: unknown) => (v ? new Date(String(v)) : new Date());
 const bool = (v: unknown) => String(v) === "1" || v === true;
 
+// Ambil data demografi (agama, jumlah keluarga, handphone) kepala keluarga dari
+// data legacy. Prioritaskan house_owner, lalu house_occupied. Mengembalikan null
+// bila rumah belum memiliki data penghuni.
+function houseDemographic(h: any): {
+  religion: string | null;
+  sumFamily: string | null;
+  phone: string | null;
+} {
+  const source =
+    (Array.isArray(h.house_owner) && h.house_owner.length > 0
+      ? h.house_owner[0]
+      : null) ??
+    (Array.isArray(h.house_occupied) && h.house_occupied.length > 0
+      ? h.house_occupied[0]
+      : null);
+  if (!source) return { religion: null, sumFamily: null, phone: null };
+  const religion = source.religion ? String(source.religion).trim() : "";
+  const sumFamily = source.sum_family ? String(source.sum_family).trim() : "";
+  const phone = source.handphone ? String(source.handphone).trim() : "";
+  return {
+    religion: religion || null,
+    sumFamily: sumFamily || null,
+    phone: phone || null,
+  };
+}
+
 // Setelah insert data dengan ID eksplisit, sequence auto-increment Postgres
 // tidak ikut maju. Akibatnya INSERT baru memakai id=1 → bentrok unique.
 // Fungsi ini menyetel ulang sequence ke MAX(id)+1 untuk tiap tabel terkait.
@@ -79,6 +105,37 @@ async function backfillResidents() {
   console.log(`  ✓ backfill ${toCreate.length} pemilik dari nama rumah`);
 }
 
+// Mengisi kolom religion/sumFamily/headPhone pada House dari data legacy
+// (houses.json). Idempotent: hanya meng-update rumah yang kolom demografinya
+// masih kosong, sehingga aman dijalankan tiap deploy tanpa menimpa data baru.
+async function enrichHouseDemographics() {
+  const scraped = load<any[]>("houses.json");
+  const houses = await prisma.house.findMany({
+    select: { id: true, religion: true, sumFamily: true, headPhone: true },
+  });
+  const existing = new Map(houses.map((h) => [h.id, h]));
+
+  let updated = 0;
+  for (const h of scraped) {
+    const id = Number(h.id);
+    const row = existing.get(id);
+    if (!row) continue;
+    if (row.religion || row.sumFamily || row.headPhone) continue; // sudah terisi
+    const demo = houseDemographic(h);
+    if (!demo.religion && !demo.sumFamily && !demo.phone) continue;
+    await prisma.house.update({
+      where: { id },
+      data: {
+        religion: demo.religion,
+        sumFamily: demo.sumFamily,
+        headPhone: demo.phone,
+      },
+    });
+    updated++;
+  }
+  console.log(`  ✓ enrich demografi ${updated} rumah dari data legacy`);
+}
+
 async function main() {
   console.log("🌱 Seeding database from scraped Puri Pelican data...");
 
@@ -104,6 +161,7 @@ async function main() {
       `  ⏭️  ${existingHouses} rumah sudah ada — lewati reseed (data dipertahankan).`
     );
     await backfillResidents();
+    await enrichHouseDemographics();
     await fixSequences();
     return;
   }
@@ -138,6 +196,9 @@ async function main() {
       cashAmount: h.cash_amount != null ? toInt(h.cash_amount) : null,
       payPkk: bool(h.pay_pkk),
       pkkAmount: h.pkk_amount != null ? toInt(h.pkk_amount) : null,
+      religion: houseDemographic(h).religion,
+      sumFamily: houseDemographic(h).sumFamily,
+      headPhone: houseDemographic(h).phone,
       createdAt: date(h.created_at),
     })),
   });

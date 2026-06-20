@@ -19,6 +19,9 @@ type House = {
   payIpl: boolean;
   iplAmount: number;
   unpaid: number;
+  religion?: string | null;
+  sumFamily?: string | null;
+  headPhone?: string | null;
 };
 
 type Resident = {
