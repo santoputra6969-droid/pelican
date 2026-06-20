@@ -5,6 +5,7 @@ import { Icon } from "@/components/Icon";
 import { prisma } from "@/lib/prisma";
 import { getSelectedHouse } from "@/lib/session";
 import { formatDate, formatPeriod, formatRupiah } from "@/lib/format";
+import { getTakeoverForHouse } from "@/lib/iplTakeover";
 import { mainMenu } from "@/lib/menu";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export default async function HomePage() {
   ]);
 
   const totalDue = unpaidBills.reduce((s, b) => s + b.amount, 0);
+  const takeover = await getTakeoverForHouse(house.id);
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
   const initials = ownerName
     .split(" ")
@@ -156,6 +158,98 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Tunggakan IPL Takeover (sebelum 2025) */}
+      {takeover && takeover.totalAmount > 0 && (
+        <section className="mt-4 px-5">
+          <div className="card overflow-hidden p-0">
+            <div className="flex items-center gap-2.5 bg-amber-50 px-5 py-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                <Icon name="history" size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">
+                  Tunggakan IPL Takeover
+                </p>
+                <p className="text-[11px] text-amber-700">
+                  Sebelum 2025 · di luar tagihan berjalan
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-5">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-black/5 p-3">
+                  <p className="text-[11px] text-ink-faint">Total Tunggakan</p>
+                  <p className="mt-0.5 text-lg font-extrabold text-ink">
+                    {formatRupiah(takeover.totalAmount)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 p-3">
+                  <p className="text-[11px] text-emerald-700">Sudah Dibayar</p>
+                  <p className="mt-0.5 text-lg font-extrabold text-emerald-700">
+                    {formatRupiah(takeover.paid)}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{
+                      width: `${
+                        takeover.totalAmount > 0
+                          ? Math.min(
+                              100,
+                              Math.round(
+                                (takeover.paid / takeover.totalAmount) * 100
+                              )
+                            )
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[11px]">
+                  <span className="text-ink-faint">
+                    {takeover.totalAmount > 0
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            (takeover.paid / takeover.totalAmount) * 100
+                          )
+                        )
+                      : 0}
+                    % lunas
+                  </span>
+                  <span className="font-semibold text-ink">
+                    Sisa {formatRupiah(takeover.remaining)}
+                  </span>
+                </div>
+              </div>
+
+              {takeover.pending > 0 && (
+                <p className="rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-medium text-blue-700">
+                  Cicilan {formatRupiah(takeover.pending)} sedang diverifikasi
+                  pengurus.
+                </p>
+              )}
+
+              {takeover.remaining > 0 ? (
+                <Link href="/bayar-ipl" className="btn-primary w-full">
+                  <Icon name="home-pay" size={18} />
+                  Bayar Sekarang
+                </Link>
+              ) : (
+                <p className="rounded-xl bg-emerald-50 px-3 py-2 text-center text-xs font-semibold text-emerald-700">
+                  Tunggakan lama sudah lunas. Terima kasih!
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Menu grid */}
       <section className="mt-6 px-5">
