@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 export type BannerData = {
-  id: number;
+  id: string | number;
   image: string;
 };
 

@@ -1,12 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { HousePicker } from "@/components/HousePicker";
+import { BannerCarousel } from "@/components/BannerCarousel";
 
 export const dynamic = "force-dynamic";
 
 export default async function PilihRumahPage() {
-  const houses = await prisma.house.findMany({
-    orderBy: [{ block: "asc" }, { no: "asc" }],
-  });
+  const [houses, banners] = await Promise.all([
+    prisma.house.findMany({
+      orderBy: [{ block: "asc" }, { no: "asc" }],
+    }),
+    prisma.information.findMany({
+      where: { published: true, image: { not: null } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   return (
     <main className="flex min-h-screen flex-col bg-[var(--background)]">
@@ -18,6 +25,17 @@ export default async function PilihRumahPage() {
           Pelican.
         </p>
       </header>
+
+      {banners.length > 0 && (
+        <section className="mt-5">
+          <BannerCarousel
+            banners={banners.map((b) => ({
+              id: b.id,
+              image: b.image || "",
+            }))}
+          />
+        </section>
+      )}
 
       <HousePicker
         houses={houses.map((h) => ({

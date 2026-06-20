@@ -5,12 +5,34 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function AdminWargaPage() {
-  const houses = await prisma.house.findMany({
-    orderBy: [{ block: "asc" }, { no: "asc" }],
-    include: {
-      _count: { select: { bills: { where: { status: "UNPAID" } } } },
-    },
-  });
+  const [houses, residents, members] = await Promise.all([
+    prisma.house.findMany({
+      orderBy: [{ block: "asc" }, { no: "asc" }],
+      include: {
+        _count: { select: { bills: { where: { status: "UNPAID" } } } },
+      },
+    }),
+    prisma.resident.findMany({
+      where: { createdBy: { contains: "warga:" } },
+      select: {
+        houseId: true,
+        name: true,
+        phone: true,
+        role: true,
+        familyStatus: true,
+        note: true,
+      },
+    }),
+    prisma.resident.findMany({
+      where: { createdBy: { contains: ":anggota" } },
+      select: {
+        houseId: true,
+        name: true,
+        phone: true,
+        note: true,
+      },
+    }),
+  ]);
 
   return (
     <div className="px-4 py-5 sm:px-5 sm:py-6 lg:px-8">
@@ -30,6 +52,8 @@ export default async function AdminWargaPage() {
           iplAmount: h.iplAmount,
           unpaid: h._count.bills,
         }))}
+        residents={residents}
+        members={members}
       />
     </div>
   );

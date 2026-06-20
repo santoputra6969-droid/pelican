@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 import { Icon } from "@/components/Icon";
 import { deleteHouse, saveHouse } from "@/app/admin/actions";
 import { ActionForm } from "./ActionForm";
+import { WargaExportPdf } from "./WargaExportPdf";
 import { formatRupiah } from "@/lib/format";
 
 type House = {
@@ -20,7 +21,31 @@ type House = {
   unpaid: number;
 };
 
-export function WargaManager({ houses }: { houses: House[] }) {
+type Resident = {
+  houseId: number;
+  name: string | null;
+  phone: string | null;
+  role: string | null;
+  familyStatus: string | null;
+  note: string | null;
+};
+
+type FamilyMember = {
+  houseId: number;
+  name: string | null;
+  phone: string | null;
+  note: string | null;
+};
+
+export function WargaManager({
+  houses,
+  residents,
+  members,
+}: {
+  houses: House[];
+  residents?: Resident[];
+  members?: FamilyMember[];
+}) {
   const [editing, setEditing] = useState<House | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -92,6 +117,13 @@ export function WargaManager({ houses }: { houses: House[] }) {
           <Icon name="user-edit" size={17} />
           Pengkinian Data
         </Link>
+        {residents && members && (
+          <WargaExportPdf
+            houses={houses}
+            residents={residents}
+            members={members}
+          />
+        )}
       </div>
 
       {/* Desktop table */}
