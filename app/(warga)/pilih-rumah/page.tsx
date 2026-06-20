@@ -9,9 +9,9 @@ export default async function PilihRumahPage() {
     prisma.house.findMany({
       orderBy: [{ block: "asc" }, { no: "asc" }],
     }),
-    prisma.information.findMany({
-      where: { published: true, image: { not: null } },
-      orderBy: { createdAt: "desc" },
+    prisma.banner.findMany({
+      where: { active: true },
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
     }),
   ]);
 
@@ -31,7 +31,7 @@ export default async function PilihRumahPage() {
           <BannerCarousel
             banners={banners.map((b) => ({
               id: b.id,
-              image: b.image || "",
+              image: b.image,
             }))}
           />
         </section>

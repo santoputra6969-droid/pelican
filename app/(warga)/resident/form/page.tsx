@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/BottomNav";
 import { PageHeader } from "@/components/PageHeader";
-import { ResidentForm } from "@/components/ResidentForm";
+import { ResidentReadOnly } from "@/components/ResidentReadOnly";
 import { prisma } from "@/lib/prisma";
 import { getSelectedHouse } from "@/lib/session";
 
@@ -26,11 +26,7 @@ export default async function ResidentFormPage() {
   const house = await getSelectedHouse();
   if (!house) redirect("/pilih-rumah");
 
-  const [houses, existing, members] = await Promise.all([
-    prisma.house.findMany({
-      select: { block: true, no: true },
-      orderBy: [{ block: "asc" }, { no: "asc" }],
-    }),
+  const [existing, members] = await Promise.all([
     prisma.resident.findFirst({
       where: { houseId: house.id, createdBy: `warga:${house.id}` },
       orderBy: { id: "asc" },
@@ -51,22 +47,22 @@ export default async function ResidentFormPage() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <PageHeader title="Pengkinian Data" subtitle="Lengkapi data penghuni rumah" />
+      <PageHeader title="Pengkinian Data" subtitle="Data penghuni rumah" />
 
       <section className="-mt-2 px-5">
-        <ResidentForm
-          houses={houses}
-          selectedBlock={house.block}
-          selectedNo={house.no}
-          defaultName={existing?.name ?? house.ownerName ?? ""}
-          defaultPhone={existing?.phone ?? ""}
-          defaultRelation={existing?.role ?? "PEMILIK"}
-          defaultFamilyStatus={existing?.familyStatus ?? ""}
-          defaultReligion={parseReligion(existing?.note ?? null)}
-          defaultMembers={members.map((m) => ({
+        <ResidentReadOnly
+          block={house.block}
+          no={house.no}
+          name={existing?.name ?? house.ownerName ?? ""}
+          phone={existing?.phone ?? ""}
+          relation={existing?.role ?? "PEMILIK"}
+          familyStatus={existing?.familyStatus ?? ""}
+          religion={parseReligion(existing?.note ?? null)}
+          members={members.map((m) => ({
             relation: parseRelation(m.note),
             name: m.name,
           }))}
+          hasData={Boolean(existing)}
         />
       </section>
 
