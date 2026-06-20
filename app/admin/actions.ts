@@ -387,49 +387,114 @@ export async function createTransaction(formData: FormData): Promise<ActionResul
   if (image && image.ok === false) return { ok: false, message: image.message };
 
   const mutation = kind === "MASUK" ? "DEBIT" : "KREDIT";
-  const delta = mutation === "DEBIT" ? amount : -amount;
 
-  await prisma.$transaction(async (tx) => {
-    const trx = await tx.transaction.create({
-      data: {
-        category,
-        type,
-        notes,
-        amount,
-        mutation,
-        image: image?.ok ? image.id : null,
-        createdBy,
-      },
-    });
-
-    const bal = await tx.balance.findFirst({ orderBy: { id: "asc" } });
-    if (bal) {
-      await tx.balance.update({
-        where: { id: bal.id },
-        data:
-          category === "PKK"
-            ? {
-                balancePkk: { increment: delta },
-                lastTxId: String(trx.id),
-                updatedBy: actor,
-              }
-            : {
-                balance: { increment: delta },
-                lastTxId: String(trx.id),
-                updatedBy: actor,
-              },
-      });
-    }
+  // Transaksi manual masuk ke PENDING dulu (sama seperti pembayaran Midtrans).
+  // Saldo TIDAK langsung berubah — baru berubah saat pengurus klik "Update Saldo".
+  await prisma.transaction.create({
+    data: {
+      category,
+      type,
+      notes,
+      amount,
+      mutation,
+      status: "PENDING",
+      image: image?.ok ? image.id : null,
+      createdBy,
+    },
   });
 
+  revalidatePath("/admin/saldo");
+  revalidatePath("/admin/transaksi");
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    message: `Transaksi ${kind === "MASUK" ? "pemasukan" : "pengeluaran"} ${formatRupiah(amount)} dicatat ke pending. Klik "Update Saldo" untuk mengonfirmasi.`,
+  };
+}
+
+export async function confirmPendingTransactions(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const ids = formData
+    .getAll("transactionIds")
+    .map((value) => Number(String(value)))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (ids.length === 0) {
+    return { ok: false, message: "Pilih minimal 1 transaksi pending untuk dikonfirmasi." };
+  }
+
+  let confirmed = 0;
+  let skipped = 0;
+
+  for (const id of ids) {
+    await prisma.$transaction(async (tx) => {
+      const trx = await tx.transaction.findUnique({ where: { id } });
+      if (!trx || trx.status !== "PENDING") {
+        skipped += 1;
+        return;
+      }
+
+      await tx.transaction.update({
+        where: { id },
+        data: { status: "POSTED" },
+      });
+
+      const delta = trx.mutation === "DEBIT" ? trx.amount : -trx.amount;
+      const bal = await tx.balance.findFirst({ orderBy: { id: "asc" } });
+      if (bal) {
+        await tx.balance.update({
+          where: { id: bal.id },
+          data:
+            trx.category === "PKK"
+              ? {
+                  balancePkk: { increment: delta },
+                  lastTxId: String(trx.id),
+                  updatedBy: admin.username,
+                }
+              : {
+                  balance: { increment: delta },
+                  lastTxId: String(trx.id),
+                  updatedBy: admin.username,
+                },
+        });
+      }
+      confirmed += 1;
+    });
+  }
+
+  revalidatePath("/admin/saldo");
   revalidatePath("/admin/transaksi");
   revalidatePath("/admin");
   revalidatePath("/transaksi");
   revalidatePath("/");
-  return {
-    ok: true,
-    message: `Transaksi ${kind === "MASUK" ? "pemasukan" : "pengeluaran"} dicatat: ${formatRupiah(amount)}.`,
-  };
+
+  if (confirmed === 0) {
+    return { ok: false, message: "Tidak ada transaksi pending yang berhasil dikonfirmasi." };
+  }
+
+  const suffix = skipped > 0 ? `, ${skipped} dilewati` : "";
+  return { ok: true, message: `${confirmed} transaksi berhasil masuk ke saldo${suffix}.` };
+}
+
+export async function deletePendingTransaction(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const id = Number(String(formData.get("id") ?? ""));
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Transaksi tidak valid." };
+  }
+
+  const trx = await prisma.transaction.findUnique({ where: { id } });
+  if (!trx) return { ok: false, message: "Transaksi tidak ditemukan." };
+  if (trx.status !== "PENDING") {
+    return { ok: false, message: "Hanya transaksi pending yang dapat dibatalkan." };
+  }
+
+  if (trx.image) await deleteStoredFile(trx.image);
+  await prisma.transaction.delete({ where: { id } });
+
+  revalidatePath("/admin/saldo");
+  revalidatePath("/admin");
+  return { ok: true, message: "Transaksi pending dibatalkan." };
 }
 
 export async function confirmPendingPayments(formData: FormData): Promise<ActionResult> {

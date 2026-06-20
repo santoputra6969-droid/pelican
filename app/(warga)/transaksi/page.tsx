@@ -15,6 +15,7 @@ export default async function TransaksiPage() {
 
   const [transactions, balance] = await Promise.all([
     prisma.transaction.findMany({
+      where: { status: "POSTED" },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),

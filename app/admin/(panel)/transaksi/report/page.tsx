@@ -31,6 +31,7 @@ export default async function AdminTransaksiReportPage({
   const toDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
   const where = {
+    status: "POSTED",
     createdAt: { gte: fromDate, lte: toDate },
     ...(category !== "SEMUA" ? { category } : {}),
   };

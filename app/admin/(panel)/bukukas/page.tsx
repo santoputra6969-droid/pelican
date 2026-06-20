@@ -21,11 +21,11 @@ export default async function AdminBukuKasPage({
   const [opening, txs] = await Promise.all([
     // saldo awal = total mutasi sebelum periode
     prisma.transaction.findMany({
-      where: { createdAt: { lt: start } },
+      where: { status: "POSTED", createdAt: { lt: start } },
       select: { amount: true, mutation: true },
     }),
     prisma.transaction.findMany({
-      where: { createdAt: { gte: start, lt: end } },
+      where: { status: "POSTED", createdAt: { gte: start, lt: end } },
       orderBy: { createdAt: "asc" },
     }),
   ]);

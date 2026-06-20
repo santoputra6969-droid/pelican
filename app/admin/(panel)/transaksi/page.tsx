@@ -34,6 +34,7 @@ export default async function AdminTransaksiPage({
   const toDate = new Date(`${to}T23:59:59.999Z`);
 
   const where = {
+    status: "POSTED",
     createdAt: { gte: fromDate, lte: toDate },
     ...(category !== "SEMUA" ? { category } : {}),
     ...(mutation !== "SEMUA" ? { mutation } : {}),

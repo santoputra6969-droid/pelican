@@ -43,19 +43,27 @@ export function HousePicker({ houses }: { houses: HouseLite[] }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return houses.filter((h) => {
-      if (block && h.block !== block) return false;
-      if (no && h.no !== no) return false;
-      if (q) {
-        const match =
-          (h.ownerName ?? "").toLowerCase().includes(q) ||
-          `${h.block}${h.no}`.toLowerCase().includes(q) ||
-          `${h.block} ${h.no}`.toLowerCase().includes(q) ||
-          h.block.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
-    });
+    return houses
+      .filter((h) => {
+        if (block && h.block !== block) return false;
+        if (no && h.no !== no) return false;
+        if (q) {
+          const match =
+            (h.ownerName ?? "").toLowerCase().includes(q) ||
+            `${h.block}${h.no}`.toLowerCase().includes(q) ||
+            `${h.block} ${h.no}`.toLowerCase().includes(q) ||
+            h.block.toLowerCase().includes(q);
+          if (!match) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const blockCmp = a.block.localeCompare(b.block, undefined, {
+          numeric: true,
+        });
+        if (blockCmp !== 0) return blockCmp;
+        return naturalNo(a.no, b.no);
+      });
   }, [houses, block, no, query]);
 
   const showList = block !== "" || query.trim() !== "";

@@ -21,7 +21,7 @@ export const mainMenu: MenuItem[] = [
   { id: "m9", label: "Lapor Warga", icon: "megaphone", href: "/pengaduan", accent: "#f97316" },
   { id: "m10", label: "Voting Warga", icon: "check", href: "/vote", accent: "#ec4899" },
   { id: "m11", label: "Kontribusi", icon: "heart", href: "/kontribusi", accent: "#e11d48" },
-  { id: "m12", label: "Bantuan", icon: "help", href: "/menu", accent: "#94a3b8" },
+  { id: "m12", label: "Arsip", icon: "archive", href: "/arsip", accent: "#0d9488" },
 ];
 
 export const allMenu: MenuItem[] = [

@@ -89,6 +89,7 @@ model Transaction {
   notes        String?
   amount       Int
   mutation     String   @default("DEBIT") // DEBIT (masuk) | KREDIT (keluar)
+  status       String   @default("POSTED") // POSTED (mempengaruhi saldo) | PENDING (menunggu update saldo)
   image        String?
   createdBy    String?
   createdAt    DateTime @default(now())

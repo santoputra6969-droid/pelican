@@ -66,6 +66,7 @@ async function getCommunityFeeSnapshot(feeType: CommunityFeeType) {
     }),
     prisma.transaction.findMany({
       where: {
+        status: "POSTED",
         mutation: "DEBIT",
         type: { equals: feeType, mode: "insensitive" },
       },

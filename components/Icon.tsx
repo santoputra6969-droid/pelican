@@ -16,6 +16,7 @@ type IconName =
   | "cart"
   | "chat"
   | "help"
+  | "archive"
   | "home"
   | "history"
   | "user"
@@ -129,6 +130,13 @@ const paths: Record<IconName, ReactElement> = {
       <circle cx="12" cy="12" r="9" />
       <path d="M9.5 9a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3.5" />
       <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  archive: (
+    <>
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+      <path d="M9 12h6" />
     </>
   ),
   home: (

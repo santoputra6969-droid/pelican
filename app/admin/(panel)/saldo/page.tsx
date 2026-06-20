@@ -9,9 +9,15 @@ import { Icon } from "@/components/Icon";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSaldoPage() {
-  const [transactions, pendingPaymentsRaw, houses, balance, masukUtama, keluarUtama, masukPkk, keluarPkk] =
+  const [transactions, pendingTransactionsRaw, pendingPaymentsRaw, houses, balance, masukUtama, keluarUtama, masukPkk, keluarPkk] =
     await Promise.all([
       prisma.transaction.findMany({
+        where: { status: "POSTED" },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      }),
+      prisma.transaction.findMany({
+        where: { status: "PENDING" },
         orderBy: { createdAt: "desc" },
         take: 200,
       }),
@@ -33,19 +39,19 @@ export default async function AdminSaldoPage() {
       }),
       prisma.balance.findFirst({ orderBy: { id: "asc" } }),
       prisma.transaction.aggregate({
-        where: { category: "UTAMA", mutation: "DEBIT" },
+        where: { status: "POSTED", category: "UTAMA", mutation: "DEBIT" },
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({
-        where: { category: "UTAMA", mutation: "KREDIT" },
+        where: { status: "POSTED", category: "UTAMA", mutation: "KREDIT" },
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({
-        where: { category: "PKK", mutation: "DEBIT" },
+        where: { status: "POSTED", category: "PKK", mutation: "DEBIT" },
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({
-        where: { category: "PKK", mutation: "KREDIT" },
+        where: { status: "POSTED", category: "PKK", mutation: "KREDIT" },
         _sum: { amount: true },
       }),
     ]);
@@ -56,6 +62,23 @@ export default async function AdminSaldoPage() {
     settledAt: payment.settledAt ? payment.settledAt.toISOString() : null,
     house: payment.houseId ? houseMap.get(payment.houseId) ?? null : null,
   }));
+  const pendingTransactions = pendingTransactionsRaw.map((t) => ({
+    id: t.id,
+    category: t.category,
+    type: t.type,
+    notes: t.notes,
+    amount: t.amount,
+    mutation: t.mutation,
+    createdBy: t.createdBy,
+    date: t.createdAt.toISOString(),
+  }));
+  const pendingTotal =
+    pendingPayments.reduce((total, payment) => total + payment.amount, 0) +
+    pendingTransactions.reduce(
+      (total, t) => total + (t.mutation === "DEBIT" ? t.amount : -t.amount),
+      0
+    );
+  const pendingCount = pendingPayments.length + pendingTransactions.length;
 
   return (
     <div className="px-5 py-6 lg:px-8">
@@ -64,7 +87,7 @@ export default async function AdminSaldoPage() {
         subtitle="Ringkasan saldo kas utama, kas PKK, dan mutasi terbaru"
         action={
           <div className="flex flex-col gap-2 sm:flex-row">
-            <PendingSaldoReview payments={pendingPayments} />
+            <PendingSaldoReview payments={pendingPayments} transactions={pendingTransactions} />
             <AddTransaksiForm />
           </div>
         }
@@ -98,9 +121,9 @@ export default async function AdminSaldoPage() {
         <div className="card p-4">
           <p className="text-xs text-ink-faint">Saldo pending review</p>
           <p className="mt-2 text-lg font-extrabold text-ink">
-            {formatRupiah(pendingPayments.reduce((total, payment) => total + payment.amount, 0))}
+            {formatRupiah(pendingTotal)}
           </p>
-          <p className="text-xs text-ink-faint">{pendingPayments.length} transaksi menunggu konfirmasi</p>
+          <p className="text-xs text-ink-faint">{pendingCount} transaksi menunggu konfirmasi</p>
         </div>
       </div>
 
