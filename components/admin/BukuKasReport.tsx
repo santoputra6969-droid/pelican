@@ -92,11 +92,11 @@ export function BukuKasReport({
     const kopDataUrl = await loadKopDataUrl(window.location.origin);
 
     const drawHeader = (title: string, subtitle?: string) => {
-      let headerY = 24;
+      let headerY = 20;
       if (kopDataUrl) {
         const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
-        doc.addImage(kopDataUrl, imageType, marginX, headerY, pageWidth - marginX * 2, 58);
-        headerY += 70;
+        doc.addImage(kopDataUrl, imageType, marginX, headerY, pageWidth - marginX * 2, 75);
+        headerY += 85;
       }
 
       doc.setFont("helvetica", "bold");
