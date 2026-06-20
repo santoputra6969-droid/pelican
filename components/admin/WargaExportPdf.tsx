@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { Icon } from "@/components/Icon";
-import { formatDate } from "@/lib/format";
 
 type House = {
   id: number;
@@ -25,9 +24,50 @@ type Resident = {
 type FamilyMember = {
   houseId: number;
   name: string | null;
-  phone: string | null;
+  phone?: string | null;
   note: string | null;
 };
+
+const RELIGION_LABELS: Record<string, string> = {
+  ISLAM: "Islam",
+  KRISTEN: "Kristen",
+  KATHOLIK: "Katholik",
+  BUDDHA: "Buddha",
+  HINDU: "Hindu",
+  KHONGHUCU: "Khonghucu",
+};
+
+const FAMILY_LABELS: Record<string, string> = {
+  K0: "Kawin",
+  K1: "Kawin Anak 1",
+  K2: "Kawin Anak 2",
+  K3: "Kawin Anak 3",
+  K4: "Kawin Anak 4",
+  K5: "Kawin Anak 5",
+  TK: "TK",
+  TK0: "Bercerai",
+  TK1: "Bercerai Anak 1",
+  TK2: "Bercerai Anak 2",
+  TK3: "Bercerai Anak 3",
+  TK4: "Bercerai Anak 4",
+  TK5: "Bercerai Anak 5",
+};
+
+function parseReligion(note: string | null): string {
+  if (!note) return "";
+  const match = note.match(/AGAMA:([A-Z]+)/);
+  return match?.[1] ?? "";
+}
+
+function familyCode(status: string | null): string | null {
+  if (!status) return null;
+  if (status === "KAWIN") return "K0";
+  if (status.startsWith("KAWIN_ANAK_")) return "K" + status.split("_").pop();
+  if (status === "BELUM_KAWIN") return "TK";
+  if (status === "BERCERAI") return "TK0";
+  if (status.startsWith("BERCERAI_ANAK_")) return "TK" + status.split("_").pop();
+  return null;
+}
 
 export function WargaExportPdf({
   houses,
@@ -50,220 +90,234 @@ export function WargaExportPdf({
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const marginX = 12;
-    const marginY = 12;
 
-    // Header
-    let cursorY = marginY;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("PEMERINTAHAN KABUPATEN TANGERANG", pageWidth / 2, cursorY, { align: "center" });
-    cursorY += 4;
-    doc.text("KECAMATAN PASAR KEMIS - DESA SUKAMANTRI", pageWidth / 2, cursorY, { align: "center" });
-    cursorY += 4;
-    doc.text("RUKUN TETANGGA 09 RUKUN WARGA 11", pageWidth / 2, cursorY, { align: "center" });
-    cursorY += 5;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("CLUSTER PURI PELICAN", pageWidth / 2, cursorY, { align: "center" });
-    cursorY += 8;
-
-    // Subtitle
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Sekretariat: Cluster Puri Pelican, Ds. Sukamantri, Pasar Kemis, Kab. Tangerang 15560", pageWidth / 2, cursorY, {
-      align: "center",
+    // Build resident lookup (first occurrence = latest by id desc from query)
+    const residentByHouse = new Map<number, Resident>();
+    residents.forEach((r) => {
+      if (!residentByHouse.has(r.houseId)) residentByHouse.set(r.houseId, r);
     });
-    cursorY += 3;
-    doc.text("Email: clusterpericelican.purija@gmail.com", pageWidth / 2, cursorY, { align: "center" });
-    cursorY += 8;
 
-    // Title
+    // ---- Kop Surat ----
+    const kopDataUrl = await loadKopDataUrl(window.location.origin);
+    let cursorY = 12;
+    if (kopDataUrl) {
+      const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      const kopWidth = pageWidth - marginX * 2;
+      const kopHeight = kopWidth / 6.4;
+      doc.addImage(kopDataUrl, imageType, marginX, cursorY, kopWidth, kopHeight);
+      cursorY += kopHeight + 6;
+    } else {
+      cursorY += 4;
+    }
+
+    // ---- Title ----
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(13);
+    doc.setTextColor(20, 20, 20);
     doc.text("Data Warga Cluster Puri Pelican", pageWidth / 2, cursorY, { align: "center" });
     cursorY += 6;
 
-    // Filter Info
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text("Filter: Semua Data | Jumlah: " + houses.length + " rumah", marginX, cursorY);
-    cursorY += 3;
-    doc.text("Tanggal Cetak: " + new Date().toLocaleDateString("id-ID"), marginX, cursorY);
-    cursorY += 8;
+    doc.text(`Filter: Semua Data | Jumlah: ${houses.length} rumah`, pageWidth / 2, cursorY, {
+      align: "center",
+    });
+    cursorY += 4.5;
+    doc.text(`Tanggal Cetak: ${formatDateLong(new Date())}`, pageWidth / 2, cursorY, {
+      align: "center",
+    });
+    cursorY += 10;
 
-    // Summary section
+    // ---- RINGKASAN DATA ----
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.text("RINGKASAN DATA", marginX, cursorY);
-    cursorY += 6;
+    cursorY += 7;
 
-    // Calculate statistics
+    // Status Hunian
     const totalRumah = houses.length;
     const kosong = houses.filter((h) => !h.occupied).length;
     const ditempatiPemilik = houses.filter((h) => h.occupied && h.occupiedByOwner).length;
     const ditempatiPengontrak = houses.filter((h) => h.occupied && !h.occupiedByOwner).length;
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Status Hunian:", marginX, cursorY);
-    cursorY += 3.5;
-    doc.text(`• Total Rumah: ${totalRumah}`, marginX + 2, cursorY);
-    cursorY += 3;
-    doc.text(`• Kosong: ${kosong}`, marginX + 2, cursorY);
-    cursorY += 3;
-    doc.text(`• Ditempati Pemilik: ${ditempatiPemilik}`, marginX + 2, cursorY);
-    cursorY += 3;
-    doc.text(`• Ditempati Pengontrak: ${ditempatiPengontrak}`, marginX + 2, cursorY);
-    cursorY += 8;
+    cursorY = drawStatSection(doc, marginX, cursorY, "Status Hunian:", [
+      `Total Rumah: ${totalRumah}`,
+      `Kosong: ${kosong}`,
+      `Ditempati Pemilik: ${ditempatiPemilik}`,
+      `Ditempati Pengontrak: ${ditempatiPengontrak}`,
+    ]);
 
-    // Statistics by Religion
-    const religionStats = calculateReligionStats(residents);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Statistik Agama:", marginX, cursorY);
-    cursorY += 3.5;
-    Object.entries(religionStats).forEach(([religion, count]) => {
-      doc.text(`• ${religion}: ${count} rumah`, marginX + 2, cursorY);
-      cursorY += 3;
+    // Statistik Agama
+    const religionCount: Record<string, number> = {};
+    let religionEmpty = 0;
+    houses.forEach((h) => {
+      const r = residentByHouse.get(h.id);
+      const code = parseReligion(r?.note ?? null);
+      if (code && RELIGION_LABELS[code]) {
+        const label = RELIGION_LABELS[code];
+        religionCount[label] = (religionCount[label] ?? 0) + 1;
+      } else {
+        religionEmpty++;
+      }
     });
-    cursorY += 2;
+    const religionLines = Object.keys(religionCount)
+      .sort((a, b) => a.localeCompare(b))
+      .map((label) => `${label}: ${religionCount[label]} rumah`);
+    if (religionEmpty > 0) religionLines.push(`Tidak diisi: ${religionEmpty} rumah`);
 
-    // Statistics by Family Size
-    const familySizeStats = calculateFamilySizeStats(residents, members);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Statistik Jumlah Keluarga:", marginX, cursorY);
-    cursorY += 3.5;
-    Object.entries(familySizeStats).forEach(([size, count]) => {
-      doc.text(`• ${size}: ${count} rumah`, marginX + 2, cursorY);
-      cursorY += 3;
+    cursorY = drawStatSection(doc, marginX, cursorY, "Statistik Agama:", religionLines);
+
+    // Statistik Jumlah Keluarga
+    const familyCount: Record<string, number> = {};
+    let familyEmpty = 0;
+    houses.forEach((h) => {
+      const r = residentByHouse.get(h.id);
+      const code = familyCode(r?.familyStatus ?? null);
+      if (code) {
+        familyCount[code] = (familyCount[code] ?? 0) + 1;
+      } else {
+        familyEmpty++;
+      }
     });
-    cursorY += 5;
+    const familyOrder = [
+      "K0", "K1", "K2", "K3", "K4", "K5",
+      "TK", "TK0", "TK1", "TK2", "TK3", "TK4", "TK5",
+    ];
+    const familyLines = familyOrder
+      .filter((code) => familyCount[code] > 0)
+      .map((code) => `${code} (${FAMILY_LABELS[code]}): ${familyCount[code]} rumah`);
+    if (familyEmpty > 0) familyLines.push(`Tidak diisi (Tidak diisi): ${familyEmpty} rumah`);
 
-    // Data table
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("DATA WARGA DETAIL", marginX, cursorY);
-    cursorY += 5;
+    cursorY = drawStatSection(doc, marginX, cursorY, "Statistik Jumlah Keluarga:", familyLines);
+
+    // ---- Tabel Data Warga (mulai halaman baru) ----
+    doc.addPage();
 
     const tableData = houses.map((house, idx) => {
-      const resident = residents.find((r) => r.houseId === house.id);
-      const familyMembers = members.filter((m) => m.houseId === house.id);
-      const status = !house.occupied ? "Kosong" : house.occupiedByOwner ? "Pemilik" : "Penyewa";
+      const resident = residentByHouse.get(house.id);
+      const status = !house.occupied
+        ? "Kosong"
+        : house.occupiedByOwner
+          ? "Pemilik"
+          : "Pengontrak";
       const name = resident?.name || house.ownerName || "-";
       const phone = resident?.phone || "-";
+      const kk = familyCode(resident?.familyStatus ?? null) ?? "-";
       const religion = parseReligion(resident?.note ?? null) || "-";
 
       return [
         String(idx + 1),
-        `${house.block}${house.no}`,
+        `${house.block}-${house.no}`,
         status,
         name,
         phone,
-        String(familyMembers.length + 1),
+        kk,
         religion,
       ];
     });
 
     autoTable(doc, {
-      startY: cursorY,
-      margin: { left: marginX, right: marginX },
+      startY: marginX,
+      margin: { left: marginX, right: marginX, top: marginX, bottom: 14 },
       head: [["No", "Rumah", "Status", "Nama", "Handphone", "KK", "Agama"]],
       body: tableData,
       theme: "grid",
       headStyles: {
-        fillColor: [200, 200, 200],
-        textColor: [0, 0, 0],
+        fillColor: [247, 208, 56],
+        textColor: [60, 50, 10],
         fontSize: 8,
         fontStyle: "bold",
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1,
       },
       bodyStyles: {
         fontSize: 8,
+        textColor: [40, 40, 40],
+        lineColor: [220, 220, 220],
+        lineWidth: 0.1,
       },
       columnStyles: {
-        0: { halign: "center", cellWidth: 8 },
-        1: { halign: "center", cellWidth: 12 },
-        2: { halign: "center", cellWidth: 12 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 30 },
-        5: { halign: "center", cellWidth: 8 },
-        6: { halign: "center", cellWidth: 18 },
+        0: { halign: "center", cellWidth: 10 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 46 },
+        4: { cellWidth: 32 },
+        5: { halign: "center", cellWidth: 14 },
+        6: { cellWidth: 30 },
       },
     });
 
-    // Save
+    // ---- Footer halaman (Halaman X of Y) ----
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Halaman ${i} of ${totalPages}`, marginX, pageHeight - 8);
+    }
+
     doc.save(`Data-Warga-${new Date().toLocaleDateString("id-ID")}.pdf`);
   }, [houses, residents, members]);
 
   return (
-    <button onClick={handleExport} className="btn-primary inline-flex items-center gap-2">
+    <button onClick={handleExport} className="btn-primary w-full sm:w-auto">
       <Icon name="receipt" size={18} />
       Export PDF
     </button>
   );
 }
 
-function parseReligion(note: string | null): string {
-  if (!note) return "";
-  const match = note.match(/AGAMA:([A-Z]+)/);
-  return match?.[1] ?? "";
+function drawStatSection(
+  doc: import("jspdf").jsPDF,
+  marginX: number,
+  startY: number,
+  title: string,
+  lines: string[]
+): number {
+  let y = startY;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(40, 40, 40);
+  doc.text(title, marginX, y);
+  y += 5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  lines.forEach((line) => {
+    doc.text(`•  ${line}`, marginX + 2, y);
+    y += 4.5;
+  });
+  return y + 4;
 }
 
-function calculateReligionStats(
-  residents: Resident[]
-): Record<string, number> {
-  const stats: Record<string, number> = {
-    Islam: 0,
-    Kristen: 0,
-    Katholik: 0,
-    Buddha: 0,
-    Hindu: 0,
-    Khonghucu: 0,
-    "Tidak disi": 0,
-  };
-
-  residents.forEach((r) => {
-    const religion = parseReligion(r.note) || "Tidak disi";
-    if (religion in stats) {
-      stats[religion]++;
-    }
+function formatDateLong(value: Date): string {
+  return value.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
-
-  return stats;
 }
 
-function calculateFamilySizeStats(
-  residents: Resident[],
-  members: FamilyMember[]
-): Record<string, number> {
-  const stats: Record<string, number> = {
-    "K0 (Kawins)": 0,
-    "K1 (Kawin Anak 1)": 0,
-    "K2 (Kawin Anak 2)": 0,
-    "K3 (Kawin Anak 3)": 0,
-    "K4 (Kawin Anak 4)": 0,
-    "K5 (Kawin Anak 5)": 0,
-    "TK (Tidak Kawin)": 0,
-  };
-
-  const houseToMembers = new Map<number, number>();
-  members.forEach((m) => {
-    houseToMembers.set(m.houseId, (houseToMembers.get(m.houseId) ?? 0) + 1);
+async function loadImageAsDataUrl(imageUrl: string) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error("Gagal memuat gambar kop");
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal mengubah gambar ke data URL"));
+    reader.readAsDataURL(blob);
   });
+}
 
-  residents.forEach((r) => {
-    const familyStatus = r.familyStatus || "";
-    const memberCount = houseToMembers.get(r.houseId) ?? 0;
-
-    if (familyStatus.startsWith("KAWIN_ANAK_")) {
-      const num = familyStatus.split("_").pop();
-      stats[`K${num} (Kawin Anak ${num})`] = (stats[`K${num} (Kawin Anak ${num})`] ?? 0) + 1;
-    } else if (familyStatus === "KAWIN") {
-      stats["K0 (Kawins)"]++;
-    } else {
-      stats["TK (Tidak Kawin)"]++;
+async function loadKopDataUrl(origin: string) {
+  try {
+    return await loadImageAsDataUrl(`${origin}/kop-surat.png`);
+  } catch {
+    try {
+      return await loadImageAsDataUrl(`${origin}/kop-surat.jpg`);
+    } catch {
+      return null;
     }
-  });
-
-  return Object.fromEntries(Object.entries(stats).filter(([, count]) => count > 0));
+  }
 }

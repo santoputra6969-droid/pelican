@@ -13,7 +13,13 @@ export default async function AdminWargaPage() {
       },
     }),
     prisma.resident.findMany({
-      where: { createdBy: { contains: "warga:" } },
+      where: {
+        NOT: { createdBy: { contains: ":anggota" } },
+        OR: [
+          { createdBy: { contains: "warga:" } },
+          { createdBy: { contains: "pengkinian:" } },
+        ],
+      },
       select: {
         houseId: true,
         name: true,
@@ -22,6 +28,7 @@ export default async function AdminWargaPage() {
         familyStatus: true,
         note: true,
       },
+      orderBy: [{ houseId: "asc" }, { id: "desc" }],
     }),
     prisma.resident.findMany({
       where: { createdBy: { contains: ":anggota" } },
@@ -31,6 +38,7 @@ export default async function AdminWargaPage() {
         phone: true,
         note: true,
       },
+      orderBy: [{ houseId: "asc" }, { id: "asc" }],
     }),
   ]);
 
