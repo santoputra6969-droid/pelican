@@ -136,6 +136,63 @@ async function enrichHouseDemographics() {
   console.log(`  ✓ enrich demografi ${updated} rumah dari data legacy`);
 }
 
+// Mengimpor arsip dokumen (Laporan Keuangan PDF) hasil scrape web lama ke DB
+// kita sendiri: file disimpan sebagai StoredFile (bytea), lalu dicatat di tabel
+// Archive. Idempotent: arsip dengan judul yang sama tidak diimpor ulang.
+async function importArchives() {
+  let manifest: any[] = [];
+  try {
+    manifest = load<any[]>("archieve.json");
+  } catch {
+    return; // tidak ada data arsip scrape → lewati
+  }
+  if (!Array.isArray(manifest) || manifest.length === 0) return;
+
+  const existingTitles = new Set(
+    (await prisma.archive.findMany({ select: { title: true } })).map((a) =>
+      a.title.trim().toLowerCase()
+    )
+  );
+
+  let imported = 0;
+  for (const item of manifest) {
+    const title = String(item.title ?? "").trim();
+    if (!title || existingTitles.has(title.toLowerCase())) continue;
+
+    let data: Buffer;
+    try {
+      data = readFileSync(join(DATA, "archieve", String(item.file)));
+    } catch {
+      console.log(`  (lewati arsip "${title}" — file tidak ditemukan)`);
+      continue;
+    }
+
+    const stored = await prisma.storedFile.create({
+      data: {
+        filename: `${title}.pdf`,
+        mimeType: "application/pdf",
+        size: data.length,
+        kind: "ARSIP",
+        data,
+        createdBy: item.createdBy ?? "LEGACY",
+      },
+    });
+
+    await prisma.archive.create({
+      data: {
+        title,
+        category: "LAPORAN",
+        fileId: stored.id,
+        createdBy: item.createdBy ?? "LEGACY",
+        ...(item.createdAt ? { createdAt: new Date(String(item.createdAt)) } : {}),
+      },
+    });
+    existingTitles.add(title.toLowerCase());
+    imported++;
+  }
+  console.log(`  ✓ impor ${imported} arsip dokumen dari web lama`);
+}
+
 async function main() {
   console.log("🌱 Seeding database from scraped Puri Pelican data...");
 
@@ -162,6 +219,7 @@ async function main() {
     );
     await backfillResidents();
     await enrichHouseDemographics();
+    await importArchives();
     await fixSequences();
     return;
   }
@@ -332,6 +390,8 @@ async function main() {
   console.log(`  ✓ ${seenType.size} transaction types`);
 
   await backfillResidents();
+  await enrichHouseDemographics();
+  await importArchives();
   await fixSequences();
 
   console.log("✅ Seed complete. Admin login → admin / admin123");
