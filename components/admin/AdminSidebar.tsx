@@ -8,6 +8,7 @@ import { Icon, type IconName } from "@/components/Icon";
 const nav: { label: string; href: string; icon: IconName }[] = [
   { label: "Dashboard", href: "/admin", icon: "grid" },
   { label: "Harga IPL", href: "/admin/ipl", icon: "home-pay" },
+  { label: "IPL Takeover", href: "/admin/ipl-takeover", icon: "history" },
   { label: "Informasi", href: "/admin/informasi", icon: "megaphone" },
   { label: "Banner", href: "/admin/banner", icon: "park" },
   { label: "Transaksi", href: "/admin/transaksi", icon: "receipt" },

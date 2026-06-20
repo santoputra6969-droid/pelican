@@ -62,6 +62,17 @@ export async function settlePayment(
       (x): x is { feeType: "KAS" | "PKK"; year: number; month: number } => Boolean(x)
     );
 
+  // Cicilan takeover IPL lama. Ref: TKO-<nominal cicilan>
+  const takeoverRefs = refs
+    .map((ref) => {
+      const m = /^TKO-(\d+)$/.exec(ref);
+      if (!m) return null;
+      const amount = Number(m[1]);
+      if (!Number.isInteger(amount) || amount <= 0) return null;
+      return { amount };
+    })
+    .filter((x): x is { amount: number } => Boolean(x));
+
   const house = await prisma.house.findUnique({
     where: { id: payment.houseId },
   });
@@ -229,6 +240,64 @@ export async function settlePayment(
       } else {
         totalUtama += amount;
       }
+      lastTxId = String(trx.id);
+    }
+
+    // Cicilan takeover IPL lama -> tambah saldo utama, kurangi sisa takeover.
+    for (const tk of takeoverRefs) {
+      const takeover = await tx.iplTakeover.findUnique({
+        where: { houseId: payment.houseId },
+      });
+      if (!takeover) continue;
+      const postedAgg = await tx.iplTakeoverPayment.aggregate({
+        where: { houseId: payment.houseId, status: "POSTED" },
+        _sum: { amount: true },
+      });
+      const paid = postedAgg._sum.amount ?? 0;
+      const remaining = Math.max(0, takeover.totalAmount - paid);
+      if (remaining <= 0) continue;
+      const amount = Math.min(tk.amount, remaining);
+      const notes = `CICILAN TAKEOVER IPL ${house.block} No ${house.no}.`;
+      const idSettlement = `${orderId}-TKO-${amount}`;
+      const trx = await tx.transaction.create({
+        data: {
+          category: "UTAMA",
+          type: "IPL TAKEOVER",
+          idSettlement,
+          notes,
+          amount,
+          mutation: "DEBIT",
+          createdBy: actor,
+        },
+      });
+      await tx.iplTakeoverPayment.create({
+        data: {
+          houseId: payment.houseId,
+          amount,
+          source: "MIDTRANS",
+          status: "POSTED",
+          transactionId: trx.id,
+          orderId,
+          note: notes,
+          createdBy: actor,
+        },
+      });
+      const feeAmount = calculateMidtransFee(amount);
+      if (feeAmount > 0) {
+        await tx.transaction.create({
+          data: {
+            category: "UTAMA",
+            type: "IPL TAKEOVER",
+            idSettlement,
+            notes: `FEE - ${notes}`,
+            amount: feeAmount,
+            mutation: "KREDIT",
+            createdBy: actor,
+          },
+        });
+        totalFeeUtama += feeAmount;
+      }
+      totalUtama += amount;
       lastTxId = String(trx.id);
     }
 

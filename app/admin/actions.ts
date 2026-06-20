@@ -10,7 +10,7 @@ import { requireAdmin } from "@/lib/session";
 import { formatRupiah } from "@/lib/format";
 import { saveUploadedFile, deleteStoredFile } from "@/lib/files";
 import { settlePayment } from "@/lib/payments";
-
+import { getTakeoverForHouse } from "@/lib/iplTakeover";
 const ADMIN_COOKIE_OPTS = {
   httpOnly: true,
   sameSite: "lax" as const,
@@ -458,6 +458,13 @@ export async function confirmPendingTransactions(formData: FormData): Promise<Ac
                 },
         });
       }
+
+      // Bila transaksi ini adalah cicilan takeover IPL lama, tandai POSTED.
+      await tx.iplTakeoverPayment.updateMany({
+        where: { transactionId: id, status: "PENDING" },
+        data: { status: "POSTED" },
+      });
+
       confirmed += 1;
     });
   }
@@ -490,6 +497,7 @@ export async function deletePendingTransaction(formData: FormData): Promise<Acti
   }
 
   if (trx.image) await deleteStoredFile(trx.image);
+  await prisma.iplTakeoverPayment.deleteMany({ where: { transactionId: id } });
   await prisma.transaction.delete({ where: { id } });
 
   revalidatePath("/admin/saldo");
@@ -537,6 +545,143 @@ export async function confirmPendingPayments(formData: FormData): Promise<Action
 
   const suffix = skipped > 0 ? `, ${skipped} dilewati` : "";
   return { ok: true, message: `${confirmed} saldo pending berhasil dikonfirmasi${suffix}.` };
+}
+
+/* --------------------------- IPL Takeover (lama) -------------------------- */
+
+// Catat / ubah total tunggakan IPL lama (sebelum 2025) per rumah.
+export async function saveIplTakeover(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const houseId = Number(String(formData.get("houseId") ?? ""));
+  const totalAmount = Math.round(Number(formData.get("totalAmount") ?? 0));
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  if (!Number.isInteger(houseId) || houseId <= 0) {
+    return { ok: false, message: "Rumah tidak valid." };
+  }
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    return { ok: false, message: "Nominal tunggakan wajib diisi." };
+  }
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+  if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
+
+  // Tidak boleh menurunkan total di bawah jumlah yang sudah dibayar.
+  const paidAgg = await prisma.iplTakeoverPayment.aggregate({
+    where: { houseId, status: "POSTED" },
+    _sum: { amount: true },
+  });
+  const paid = paidAgg._sum.amount ?? 0;
+  if (totalAmount < paid) {
+    return {
+      ok: false,
+      message: `Total tidak boleh lebih kecil dari yang sudah dibayar (${formatRupiah(paid)}).`,
+    };
+  }
+
+  await prisma.iplTakeover.upsert({
+    where: { houseId },
+    create: { houseId, totalAmount, note, createdBy: admin.username },
+    update: { totalAmount, note },
+  });
+
+  revalidatePath("/admin/ipl-takeover");
+  revalidatePath("/bayar-ipl");
+  return {
+    ok: true,
+    message: `Tunggakan IPL lama Blok ${house.block} No ${house.no} disimpan (${formatRupiah(totalAmount)}).`,
+  };
+}
+
+// Hapus takeover (hanya bila belum ada cicilan terbayar).
+export async function deleteIplTakeover(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const houseId = Number(String(formData.get("houseId") ?? ""));
+  if (!Number.isInteger(houseId) || houseId <= 0) {
+    return { ok: false, message: "Rumah tidak valid." };
+  }
+
+  const paidAgg = await prisma.iplTakeoverPayment.aggregate({
+    where: { houseId, status: "POSTED" },
+    _sum: { amount: true },
+  });
+  if ((paidAgg._sum.amount ?? 0) > 0) {
+    return {
+      ok: false,
+      message: "Tidak bisa dihapus karena sudah ada cicilan terbayar.",
+    };
+  }
+
+  await prisma.iplTakeoverPayment.deleteMany({ where: { houseId, status: "PENDING" } });
+  await prisma.iplTakeover.deleteMany({ where: { houseId } });
+
+  revalidatePath("/admin/ipl-takeover");
+  revalidatePath("/bayar-ipl");
+  return { ok: true, message: "Tunggakan IPL lama dihapus." };
+}
+
+// Catat cicilan tunai (tunggakan lama) -> masuk PENDING, konfirmasi via Update Saldo.
+export async function recordTakeoverCash(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const houseId = Number(String(formData.get("houseId") ?? ""));
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+  const author = String(formData.get("author") ?? "").trim();
+
+  if (!Number.isInteger(houseId) || houseId <= 0) {
+    return { ok: false, message: "Rumah tidak valid." };
+  }
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+  if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
+
+  const summary = await getTakeoverForHouse(houseId);
+  if (!summary || summary.remaining <= 0) {
+    return { ok: false, message: "Tidak ada sisa tunggakan lama untuk rumah ini." };
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, message: "Nominal cicilan tidak valid." };
+  }
+  if (amount > summary.remaining) {
+    return { ok: false, message: "Nominal melebihi sisa tunggakan." };
+  }
+
+  const actor = admin.username;
+  const createdBy = author && author !== actor ? `${actor} (${author})` : actor;
+  const notes = `CICILAN TUNAI TAKEOVER IPL ${house.block} No ${house.no}.`;
+
+  await prisma.$transaction(async (tx) => {
+    const trx = await tx.transaction.create({
+      data: {
+        category: "UTAMA",
+        type: "IPL TAKEOVER",
+        notes,
+        amount,
+        mutation: "DEBIT",
+        status: "PENDING",
+        createdBy,
+      },
+    });
+    await tx.iplTakeoverPayment.create({
+      data: {
+        houseId,
+        amount,
+        source: "MANUAL",
+        status: "PENDING",
+        transactionId: trx.id,
+        note: notes,
+        createdBy,
+      },
+    });
+  });
+
+  revalidatePath("/admin/ipl-takeover");
+  revalidatePath("/admin/saldo");
+  revalidatePath("/admin");
+  revalidatePath("/bayar-ipl");
+  return {
+    ok: true,
+    message: `Cicilan tunai ${formatRupiah(amount)} dicatat ke pending. Klik "Update Saldo" untuk mengonfirmasi.`,
+  };
 }
 
 /* ------------------------------ Information ------------------------------ */

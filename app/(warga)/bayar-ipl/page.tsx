@@ -2,8 +2,10 @@ import { BottomNav } from "@/components/BottomNav";
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { BayarIpl } from "@/components/BayarIpl";
+import { IplTakeoverCard } from "@/components/IplTakeoverCard";
 import { prisma } from "@/lib/prisma";
 import { getSelectedHouse } from "@/lib/session";
+import { getTakeoverForHouse } from "@/lib/iplTakeover";
 import { snapJsUrl, getClientKey } from "@/lib/midtrans";
 import Script from "next/script";
 import { redirect } from "next/navigation";
@@ -45,6 +47,7 @@ export default async function BayarIplPage() {
   ]);
 
   const ownerName = house.ownerName ?? `Rumah ${house.block} No. ${house.no}`;
+  const takeover = await getTakeoverForHouse(house.id);
   const paidThisYear = new Set(
     paidBills.filter((b) => b.year === nowYear).map((b) => b.month)
   );
@@ -95,6 +98,15 @@ export default async function BayarIplPage() {
         }))}
         futureBills={futureBills}
       />
+
+      {takeover && takeover.totalAmount > 0 && (
+        <IplTakeoverCard
+          total={takeover.totalAmount}
+          paid={takeover.paid}
+          pending={takeover.pending}
+          remaining={takeover.remaining}
+        />
+      )}
 
       <Script
         src={snapJsUrl()}

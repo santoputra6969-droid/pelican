@@ -9,7 +9,10 @@ import { formatPeriod } from "@/lib/format";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { getCommunityFeeStatusForHouse } from "@/lib/communityFees";
 import { saveUploadedFile } from "@/lib/files";
-
+import {
+  getTakeoverForHouse,
+  TAKEOVER_MIN_INSTALLMENT,
+} from "@/lib/iplTakeover";
 const COOKIE_OPTS = {
   httpOnly: true,
   sameSite: "lax" as const,
@@ -266,6 +269,106 @@ export async function createPayment(
     });
 
     return { ok: true, token: snap.token, orderId, amount: total };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error
+          ? err.message
+          : "Gagal membuat pembayaran. Coba lagi.",
+    };
+  }
+}
+
+/**
+ * Cicilan takeover IPL lama (sebelum 2025) via Midtrans Snap.
+ * Ref pembayaran: TKO-<nominal cicilan>. Saat settlement -> REVIEW lalu
+ * dikonfirmasi admin di "Update Saldo" (lib/payments.ts settlePayment).
+ */
+export async function createTakeoverPayment(
+  _prev: CreatePaymentResult,
+  formData: FormData
+): Promise<CreatePaymentResult> {
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+
+  const store = await cookies();
+  const houseId = Number(store.get(HOUSE_COOKIE)?.value ?? "");
+  if (!houseId) return { ok: false, message: "Sesi tidak valid." };
+
+  const house = await prisma.house.findUnique({ where: { id: houseId } });
+  if (!house) return { ok: false, message: "Rumah tidak ditemukan." };
+
+  const summary = await getTakeoverForHouse(houseId);
+  if (!summary || summary.remaining <= 0) {
+    return { ok: false, message: "Tidak ada tunggakan lama yang perlu dibayar." };
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, message: "Nominal cicilan tidak valid." };
+  }
+  if (amount > summary.remaining) {
+    return { ok: false, message: "Nominal melebihi sisa tunggakan." };
+  }
+  // Minimal Rp 50.000, kecuali bila sisa kurang dari itu (boleh bayar penuh).
+  const minAllowed = Math.min(TAKEOVER_MIN_INSTALLMENT, summary.remaining);
+  if (amount < minAllowed) {
+    return {
+      ok: false,
+      message: `Minimal cicilan Rp ${minAllowed.toLocaleString("id-ID")}.`,
+    };
+  }
+
+  const orderId = `TKO-${houseId}-${Date.now()}-${Math.floor(
+    Math.random() * 1000
+  )
+    .toString()
+    .padStart(3, "0")}`;
+
+  const items = [
+    {
+      id: `TKO-${amount}`,
+      price: amount,
+      quantity: 1,
+      name: `Cicilan Tunggakan IPL Lama`.slice(0, 50),
+    },
+  ];
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ?? "";
+
+  try {
+    await prisma.payment.create({
+      data: {
+        orderId,
+        houseId,
+        billIds: `TKO-${amount}`,
+        amount,
+        status: "PENDING",
+        createdBy: house.ownerName ?? `Blok ${house.block} No ${house.no}`,
+      },
+    });
+
+    const snap = await createSnapTransaction({
+      orderId,
+      grossAmount: amount,
+      items,
+      customer: {
+        first_name: house.ownerName ?? `Blok ${house.block}`,
+        last_name: `No ${house.no}`,
+      },
+      finishRedirectUrl: baseUrl
+        ? `${baseUrl}/bayar-ipl/selesai?order_id=${orderId}`
+        : undefined,
+      notificationUrl: baseUrl
+        ? `${baseUrl}/api/midtrans/notification`
+        : undefined,
+    });
+
+    await prisma.payment.update({
+      where: { orderId },
+      data: { snapToken: snap.token },
+    });
+
+    return { ok: true, token: snap.token, orderId, amount };
   } catch (err) {
     return {
       ok: false,

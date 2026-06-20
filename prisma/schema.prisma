@@ -80,7 +80,41 @@ model FeeWaiver {
   @@index([feeType])
 }
 
-// Buku kas / jurnal transaksi komunitas (pemasukan & pengeluaran)
+// Takeover tunggakan IPL lama (sebelum 2025 / sebelum serah terima developer ke
+// RT/RW). Dicatat sebagai satu nominal total per rumah, TERPISAH dari tagihan
+// (Bill) IPL berjalan sehingga tidak masuk perhitungan tunggakan/piutang biasa.
+// Warga membayar dengan mencicil (minimal Rp 50.000) via Midtrans atau tunai
+// (dicatat admin). Sisa = totalAmount - jumlah cicilan berstatus POSTED.
+model IplTakeover {
+  id          Int      @id @default(autoincrement())
+  houseId     Int      @unique
+  totalAmount Int // total tunggakan IPL lama yang ditakeover
+  note        String? // catatan admin (mis. rincian periode)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([houseId])
+}
+
+// Riwayat cicilan takeover IPL lama. PENDING = menunggu "Update Saldo" admin,
+// POSTED = sudah dikonfirmasi & mempengaruhi saldo / mengurangi sisa.
+model IplTakeoverPayment {
+  id            Int      @id @default(autoincrement())
+  houseId       Int
+  amount        Int
+  source        String   @default("MANUAL") // MANUAL (tunai) | MIDTRANS (online)
+  status        String   @default("POSTED") // PENDING | POSTED
+  transactionId Int? // id transaksi journal saat POSTED
+  orderId       String? // order_id Midtrans (untuk sumber MIDTRANS)
+  note          String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([houseId])
+  @@index([status])
+}
+
 model Transaction {
   id           Int      @id @default(autoincrement())
   category     String   @default("UTAMA") // UTAMA | PKK
