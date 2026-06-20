@@ -1,7 +1,5 @@
 "use client";
 
-import { Icon } from "@/components/Icon";
-
 type MemberRow = {
   relation: "ANAK" | "KERABAT" | "SUAMI" | "ISTRI";
   name: string | null;
@@ -65,7 +63,7 @@ export function ResidentReadOnly({
         silakan hubungi pengurus RT untuk melakukan pembaharuan.
       </div>
 
-      {hasData ? (
+      {hasData && (
         <div className="space-y-4">
           {/* Blok & Nomor */}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -115,15 +113,6 @@ export function ResidentReadOnly({
               </div>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-center">
-          <Icon name="user" size={24} className="mx-auto mb-2 text-amber-600" />
-          <p className="text-sm font-semibold text-amber-900">Data Belum Terdaftar</p>
-          <p className="mt-0.5 text-xs text-amber-800">
-            Data warga untuk Blok {block} No. {no} belum tersedia. Silakan hubungi pengurus
-            RT untuk pendataan.
-          </p>
         </div>
       )}
     </div>
