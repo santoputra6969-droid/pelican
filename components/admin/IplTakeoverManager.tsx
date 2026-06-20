@@ -76,12 +76,29 @@ export function IplTakeoverManager({
   houses: House[];
   history: Record<number, HistoryItem[]>;
 }) {
+  const [block, setBlock] = useState<string>("");
   const [editHouseId, setEditHouseId] = useState<number | "">("");
   const [total, setTotal] = useState<string>("");
   const [note, setNote] = useState<string>("");
   const [openHistory, setOpenHistory] = useState<Set<number>>(new Set());
   const [openCash, setOpenCash] = useState<Set<number>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+
+  const blocks = useMemo(
+    () =>
+      Array.from(new Set(houses.map((h) => h.block))).sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true })
+      ),
+    [houses]
+  );
+
+  const housesInBlock = useMemo(
+    () =>
+      houses
+        .filter((h) => h.block === block)
+        .sort((a, b) => (parseInt(a.no, 10) || 0) - (parseInt(b.no, 10) || 0)),
+    [houses, block]
+  );
 
   const totals = useMemo(
     () =>
@@ -97,10 +114,8 @@ export function IplTakeoverManager({
     [rows]
   );
 
-  const houseLabel = (h: House) =>
-    `Blok ${h.block} No ${h.no}${h.ownerName ? ` — ${h.ownerName}` : ""}`;
-
   function startEdit(r: Row) {
+    setBlock(r.block);
     setEditHouseId(r.houseId);
     setTotal(String(r.totalAmount));
     setNote(r.note ?? "");
@@ -110,6 +125,7 @@ export function IplTakeoverManager({
   }
 
   function resetForm() {
+    setBlock("");
     setEditHouseId("");
     setTotal("");
     setNote("");
@@ -161,26 +177,52 @@ export function IplTakeoverManager({
           onSuccess={resetForm}
           className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
         >
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-semibold text-ink">
-              Rumah
-            </label>
-            <select
-              name="houseId"
-              value={editHouseId}
-              onChange={(e) =>
-                setEditHouseId(e.target.value ? Number(e.target.value) : "")
-              }
-              required
-              className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm outline-none focus:border-pelican-400"
-            >
-              <option value="">— Pilih rumah —</option>
-              {houses.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {houseLabel(h)}
+          <div className="sm:col-span-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Blok
+              </label>
+              <select
+                value={block}
+                onChange={(e) => {
+                  setBlock(e.target.value);
+                  setEditHouseId("");
+                }}
+                className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm outline-none focus:border-pelican-400"
+              >
+                <option value="">— Pilih blok —</option>
+                {blocks.map((b) => (
+                  <option key={b} value={b}>
+                    Blok {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-ink">
+                Nomor Rumah
+              </label>
+              <select
+                name="houseId"
+                value={editHouseId}
+                onChange={(e) =>
+                  setEditHouseId(e.target.value ? Number(e.target.value) : "")
+                }
+                required
+                disabled={!block}
+                className="w-full rounded-xl border border-black/10 px-3 py-2 text-sm outline-none focus:border-pelican-400 disabled:bg-black/5"
+              >
+                <option value="">
+                  {block ? "— Pilih nomor —" : "Pilih blok dulu"}
                 </option>
-              ))}
-            </select>
+                {housesInBlock.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    No {h.no}
+                    {h.ownerName ? ` — ${h.ownerName}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
