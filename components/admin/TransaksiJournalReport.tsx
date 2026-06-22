@@ -73,9 +73,150 @@ export function TransaksiJournalReport({
     URL.revokeObjectURL(url);
   }
 
-  function exportPdf() {
+  async function exportPdf() {
     if (typeof window === "undefined") return;
-    window.print();
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = autoTableModule.default;
+
+    const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 12;
+    let currentY = margin;
+
+    const kopDataUrl = await loadKopDataUrl(window.location.origin);
+    if (kopDataUrl) {
+      const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      const kopWidth = pageWidth - margin * 2;
+      let kopHeight = kopWidth / 6.4;
+      try {
+        const props = doc.getImageProperties(kopDataUrl);
+        if (props?.width && props?.height) {
+          kopHeight = (props.height / props.width) * kopWidth;
+        }
+      } catch {
+        // fallback ratio
+      }
+      doc.addImage(kopDataUrl, imageType, margin, currentY, kopWidth, kopHeight);
+      currentY += kopHeight + 6;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("Laporan Keuangan Cluster Puri Pelican", pageWidth / 2, currentY, {
+      align: "center",
+    });
+    currentY += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(
+      `Periode Bulan ${monthLabel} Tahun ${year} · Kategori ${category}`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" }
+    );
+    currentY += 4.5;
+    doc.setTextColor(107, 114, 128);
+    doc.text(
+      `Dicetak pada ${formatDateTimeLong(new Date())} WIB`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" }
+    );
+    doc.setTextColor(17, 24, 39);
+    currentY += 6;
+
+    const lineColor: [number, number, number] = [209, 213, 219];
+    const textColor: [number, number, number] = [17, 24, 39];
+    const headFill: [number, number, number] = [253, 224, 71];
+    const baseStyles = {
+      font: "helvetica",
+      fontSize: 9,
+      cellPadding: 2.2,
+      lineColor,
+      lineWidth: 0.1,
+      textColor,
+      valign: "middle" as const,
+    };
+    const headStyles = {
+      fillColor: headFill,
+      textColor,
+      fontStyle: "bold" as const,
+      lineColor,
+      lineWidth: 0.1,
+    };
+
+    // Ringkasan Keuangan
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RINGKASAN KEUANGAN", margin, currentY);
+    autoTable(doc, {
+      startY: currentY + 2.5,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: baseStyles,
+      headStyles,
+      head: [["Keterangan", "Nilai"]],
+      body: [
+        ["Total Uang Masuk", formatRupiah(totalMasuk)],
+        ["Total Uang Keluar", formatRupiah(totalKeluar)],
+        ["Selisih (Net)", formatRupiah(net)],
+        ["Total Transaksi", `${totalCount} transaksi`],
+        ["Rata-rata Uang Masuk", formatRupiah(avgMasuk)],
+        ["Rata-rata Uang Keluar", formatRupiah(avgKeluar)],
+      ],
+      columnStyles: {
+        0: { cellWidth: (pageWidth - margin * 2) * 0.55, fontStyle: "bold" },
+        1: { halign: "right" },
+      },
+    });
+
+    // Ringkasan Per Kategori
+    let catY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("RINGKASAN PER KATEGORI", margin, catY);
+    autoTable(doc, {
+      startY: catY + 2.5,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: baseStyles,
+      headStyles,
+      head: [["Kategori", "Masuk", "Keluar", "Jumlah Transaksi"]],
+      body: categorySummary.map((row) => [
+        row.name,
+        formatRupiah(row.masuk),
+        formatRupiah(row.keluar),
+        String(row.count),
+      ]),
+      foot: [
+        [
+          "TOTAL",
+          formatRupiah(totalMasuk),
+          formatRupiah(totalKeluar),
+          String(totalCount),
+        ],
+      ],
+      footStyles: {
+        fillColor: [243, 244, 246] as [number, number, number],
+        textColor,
+        fontStyle: "bold" as const,
+        lineColor,
+        lineWidth: 0.1,
+      },
+      columnStyles: {
+        0: { fontStyle: "bold" },
+        1: { halign: "right" },
+        2: { halign: "right" },
+        3: { halign: "center" },
+      },
+    });
+
+    doc.save(
+      `laporan-transaksi-${year}-${String(month).padStart(2, "0")}.pdf`
+    );
   }
 
   return (
@@ -421,4 +562,38 @@ function niceCeil(value: number) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("id-ID").format(value);
+}
+
+function formatDateTimeLong(value: string | Date) {
+  return new Date(value).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+async function loadImageAsDataUrl(imageUrl: string) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error("Gagal memuat gambar kop");
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal mengubah gambar ke data URL"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function loadKopDataUrl(origin: string) {
+  try {
+    return await loadImageAsDataUrl(`${origin}/kop-surat.png`);
+  } catch {
+    try {
+      return await loadImageAsDataUrl(`${origin}/kop-surat.jpg`);
+    } catch {
+      return null;
+    }
+  }
 }
