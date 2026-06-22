@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { formatDateTime, formatRupiah } from "@/lib/format";
-import { printWithIOSClass } from "@/lib/printUtils";
 
 type Row = {
   id: number;
@@ -78,15 +77,6 @@ export function AdminTransaksiTable({
     URL.revokeObjectURL(url);
   }
 
-  function escapeHtml(value: string) {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
   function buildSummaryRows() {
     const byCategory = new Map<
       string,
@@ -117,29 +107,54 @@ export function AdminTransaksiTable({
       }));
   }
 
-  function buildPrintHtml() {
-    const kopUrl = `${window.location.origin}/kop-surat.png`;
-    const summaryRows = buildSummaryRows();
-    const rowsHtml = filtered
-      .map((t, index) => {
-        const masuk = t.mutation === "DEBIT";
-        const description = t.notes?.trim() || t.type || (masuk ? "Pemasukan" : "Pengeluaran");
-        const printDate = new Date(t.date).toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        });
-        return `
-          <tr>
-            <td class="col-no tc">${index + 1}</td>
-            <td class="col-date nw">${escapeHtml(printDate)}</td>
-            <td class="col-desc">${escapeHtml(description)}</td>
-            <td class="col-amount tr nw">${masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
-            <td class="col-amount tr nw">${!masuk ? escapeHtml(formatRupiah(t.amount)) : ""}</td>
-          </tr>
-        `;
-      })
-      .join("");
+  async function printPdf() {
+    if (typeof window === "undefined") return;
+    const [{ jsPDF }, autoTableModule] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ]);
+    const autoTable = autoTableModule.default;
+
+    const doc = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 12;
+    let currentY = margin;
+
+    const kopDataUrl = await loadKopDataUrl(window.location.origin);
+    if (kopDataUrl) {
+      const imageType = kopDataUrl.startsWith("data:image/jpeg") ? "JPEG" : "PNG";
+      const kopWidth = pageWidth - margin * 2;
+      let kopHeight = kopWidth / 6.4;
+      try {
+        const props = doc.getImageProperties(kopDataUrl);
+        if (props?.width && props?.height) {
+          kopHeight = (props.height / props.width) * kopWidth;
+        }
+      } catch {
+        // fallback ratio
+      }
+      doc.addImage(kopDataUrl, imageType, margin, currentY, kopWidth, kopHeight);
+      currentY += kopHeight + 6;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(title, pageWidth / 2, currentY, { align: "center" });
+    currentY += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(subtitle, pageWidth / 2, currentY, { align: "center" });
+    currentY += 4.5;
+    doc.setTextColor(107, 114, 128);
+    doc.text(
+      `Dicetak pada ${formatDateTimeLong(new Date())} WIB`,
+      pageWidth / 2,
+      currentY,
+      { align: "center" }
+    );
+    doc.setTextColor(17, 24, 39);
+    currentY += 4;
 
     const totalMasuk = filtered
       .filter((t) => t.mutation === "DEBIT")
@@ -147,230 +162,146 @@ export function AdminTransaksiTable({
     const totalKeluar = filtered
       .filter((t) => t.mutation !== "DEBIT")
       .reduce((sum, t) => sum + t.amount, 0);
+    const net = totalMasuk - totalKeluar;
 
-    return `
-      <!doctype html>
-      <html lang="id">
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${escapeHtml(title)}</title>
-          <style>
-            @page { size: A4; margin: 8mm; }
-            * {
-              box-sizing: border-box;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              background: #fff;
-              color: #111;
-              font-family: Arial, Helvetica, sans-serif;
-            }
-            .sheet {
-              width: 100%;
-            }
-            .kop {
-              width: 100%;
-              display: block;
-              margin-bottom: 8px;
-            }
-            .title {
-              margin: 0;
-              font-size: 18px;
-              font-weight: 700;
-              text-align: center;
-            }
-            .subtitle {
-              margin: 4px 0 12px;
-              font-size: 11px;
-              text-align: center;
-            }
-            .summary {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 6px;
-              margin-bottom: 10px;
-            }
-            .summary div {
-              border: 1px solid #d1d5db;
-              padding: 6px 8px;
-              font-size: 10px;
-            }
-            .summary strong {
-              display: block;
-              margin-top: 2px;
-              font-size: 12px;
-            }
-            .recap {
-              margin-top: 12px;
-              page-break-inside: avoid;
-            }
-            .recap h2 {
-              margin: 0 0 6px;
-              font-size: 12px;
-            }
-            .recap .note {
-              margin: 4px 0 0;
-              font-size: 9px;
-              color: #6b7280;
-            }
-            .label {
-              color: #6b7280;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              table-layout: fixed;
-            }
-            th, td {
-              border: 1px solid #d1d5db;
-              padding: 4px 6px;
-              font-size: 10px;
-              line-height: 1.25;
-              vertical-align: top;
-            }
-            thead th {
-              background: #ffeb3b;
-              font-weight: 700;
-              text-align: left;
-            }
-            .tc { text-align: center; }
-            .tr { text-align: right; }
-            .nw { white-space: nowrap; }
-            .col-no { width: 7%; }
-            .col-date { width: 18%; }
-            .col-desc { width: 47%; }
-            .col-amount { width: 14%; }
-            tr { page-break-inside: avoid; }
-            thead { display: table-header-group; }
-            tfoot { display: table-row-group; }
-            .footer {
-              margin-top: 10px;
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 24px;
-              font-size: 11px;
-            }
-            .sign {
-              text-align: center;
-            }
-            .sign .space {
-              height: 18mm;
-            }
-            .recap-table thead th {
-              background: #dbeafe;
-            }
-            .recap-total {
-              background: #f3f4f6;
-              font-weight: 700;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="sheet">
-            <img class="kop" src="${kopUrl}" alt="Kop Surat" />
-            <h1 class="title">${escapeHtml(title)}</h1>
-            <p class="subtitle">${escapeHtml(subtitle)}</p>
+    const lineColor: [number, number, number] = [209, 213, 219];
+    const textColor: [number, number, number] = [17, 24, 39];
+    const headFill: [number, number, number] = [253, 224, 71];
+    const baseStyles = {
+      font: "helvetica",
+      fontSize: 8.5,
+      cellPadding: 2,
+      lineColor,
+      lineWidth: 0.1,
+      textColor,
+      valign: "top" as const,
+    };
+    const headStyles = {
+      fillColor: headFill,
+      textColor,
+      fontStyle: "bold" as const,
+      lineColor,
+      lineWidth: 0.1,
+    };
 
-            <div class="summary">
-              <div><span class="label">Total Transaksi</span><strong>${filtered.length}</strong></div>
-              <div><span class="label">Total Pemasukan</span><strong>${escapeHtml(formatRupiah(totalMasuk))}</strong></div>
-              <div><span class="label">Total Pengeluaran</span><strong>${escapeHtml(formatRupiah(totalKeluar))}</strong></div>
-              <div><span class="label">Saldo Bersih</span><strong>${escapeHtml(formatRupiah(totalMasuk - totalKeluar))}</strong></div>
-            </div>
+    // Ringkasan
+    autoTable(doc, {
+      startY: currentY + 4,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: baseStyles,
+      headStyles,
+      head: [["Total Transaksi", "Total Pemasukan", "Total Pengeluaran", "Saldo Bersih"]],
+      body: [
+        [
+          String(filtered.length),
+          formatRupiah(totalMasuk),
+          formatRupiah(totalKeluar),
+          formatRupiah(net),
+        ],
+      ],
+      columnStyles: {
+        1: { halign: "right" },
+        2: { halign: "right" },
+        3: { halign: "right" },
+      },
+    });
 
-            <table>
-              <thead>
-                <tr>
-                  <th class="col-no tc">No</th>
-                  <th class="col-date">Tanggal</th>
-                  <th class="col-desc">Keterangan</th>
-                  <th class="col-amount tr">Uang Masuk</th>
-                  <th class="col-amount tr">Uang Keluar</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
+    // Detail transaksi
+    const detailBody = filtered.map((t, index) => {
+      const masuk = t.mutation === "DEBIT";
+      const description =
+        t.notes?.trim() || t.type || (masuk ? "Pemasukan" : "Pengeluaran");
+      const printDate = new Date(t.date).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+      return [
+        String(index + 1),
+        printDate,
+        description,
+        masuk ? formatRupiah(t.amount) : "",
+        !masuk ? formatRupiah(t.amount) : "",
+      ];
+    });
 
-            <div class="recap">
-              <h2>RINCIAN / TOTAL TRANSAKSI</h2>
-              <table class="recap-table">
-                <thead>
-                  <tr>
-                    <th>Jenis</th>
-                    <th class="tc">Jumlah Trx</th>
-                    <th class="tr">Masuk</th>
-                    <th class="tr">Keluar</th>
-                    <th class="tr">Net</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${summaryRows
-                    .map(
-                      (row) => `
-                        <tr>
-                          <td>${escapeHtml(row.category)}</td>
-                          <td class="tc nw">${row.count}</td>
-                          <td class="tr nw">${escapeHtml(formatRupiah(row.masuk))}</td>
-                          <td class="tr nw">${escapeHtml(formatRupiah(row.keluar))}</td>
-                          <td class="tr nw">${escapeHtml(formatRupiah(row.net))}</td>
-                        </tr>
-                      `
-                    )
-                    .join("")}
-                  <tr class="recap-total">
-                    <td>TOTAL</td>
-                    <td class="tc nw">${filtered.length}</td>
-                    <td class="tr nw">${escapeHtml(formatRupiah(totalMasuk))}</td>
-                    <td class="tr nw">${escapeHtml(formatRupiah(totalKeluar))}</td>
-                    <td class="tr nw">${escapeHtml(formatRupiah(totalMasuk - totalKeluar))}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p class="note">Ringkasan di atas merangkum seluruh transaksi yang tercetak pada laporan ini.</p>
-            </div>
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 6,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: baseStyles,
+      headStyles,
+      head: [["No", "Tanggal", "Keterangan", "Uang Masuk", "Uang Keluar"]],
+      body: detailBody.length
+        ? detailBody
+        : [["", "", "Tidak ada transaksi.", "", ""]],
+      columnStyles: {
+        0: { cellWidth: 10, halign: "center" },
+        1: { cellWidth: 24 },
+        2: { cellWidth: "auto" },
+        3: { cellWidth: 30, halign: "right" },
+        4: { cellWidth: 30, halign: "right" },
+      },
+    });
 
-            <div class="footer">
-              <div class="sign">
-                <div>Dibuat oleh,</div>
-                <div class="space"></div>
-                <div>Admin / Bendahara</div>
-              </div>
-              <div class="sign">
-                <div>Mengetahui,</div>
-                <div class="space"></div>
-                <div>Ketua Pengelola</div>
-              </div>
-            </div>
-          </div>
-          <script>
-            window.addEventListener('load', function () {
-              setTimeout(function () {
-                window.print();
-              }, 250);
-            });
-          </script>
-        </body>
-      </html>
-    `;
-  }
+    // Rekap per kategori
+    const summaryRows = buildSummaryRows();
+    autoTable(doc, {
+      startY: (doc as any).lastAutoTable.finalY + 6,
+      margin: { left: margin, right: margin },
+      theme: "grid",
+      styles: baseStyles,
+      headStyles: { ...headStyles, fillColor: [219, 234, 254] as [number, number, number] },
+      head: [["Jenis", "Jumlah Trx", "Masuk", "Keluar", "Net"]],
+      body: summaryRows.map((row) => [
+        row.category,
+        String(row.count),
+        formatRupiah(row.masuk),
+        formatRupiah(row.keluar),
+        formatRupiah(row.net),
+      ]),
+      foot: [
+        [
+          "TOTAL",
+          String(filtered.length),
+          formatRupiah(totalMasuk),
+          formatRupiah(totalKeluar),
+          formatRupiah(net),
+        ],
+      ],
+      footStyles: {
+        fillColor: [243, 244, 246] as [number, number, number],
+        textColor,
+        fontStyle: "bold" as const,
+        lineColor,
+        lineWidth: 0.1,
+      },
+      columnStyles: {
+        1: { halign: "center" },
+        2: { halign: "right" },
+        3: { halign: "right" },
+        4: { halign: "right" },
+      },
+    });
 
-  function printPdf() {
-    if (typeof window === "undefined") return;
-    const win = window.open("", "_blank");
-    if (!win) {
-      printWithIOSClass();
-      return;
+    // Tanda tangan
+    let signY = (doc as any).lastAutoTable.finalY + 16;
+    if (signY + 30 > pageHeight) {
+      doc.addPage();
+      signY = margin + 10;
     }
+    doc.setFontSize(10);
+    const leftX = margin + (pageWidth - margin * 2) * 0.25;
+    const rightX = margin + (pageWidth - margin * 2) * 0.75;
+    doc.text("Dibuat oleh,", leftX, signY, { align: "center" });
+    doc.text("Mengetahui,", rightX, signY, { align: "center" });
+    doc.text("Admin / Bendahara", leftX, signY + 22, { align: "center" });
+    doc.text("Ketua Pengelola", rightX, signY + 22, { align: "center" });
 
-    win.document.open();
-    win.document.write(buildPrintHtml());
-    win.document.close();
+    doc.save(
+      `laporan-transaksi-${new Date().toISOString().slice(0, 10)}.pdf`
+    );
   }
 
   return (
@@ -611,4 +542,38 @@ export function AdminTransaksiTable({
       )}
     </div>
   );
+}
+
+function formatDateTimeLong(value: string | Date) {
+  return new Date(value).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+async function loadImageAsDataUrl(imageUrl: string) {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error("Gagal memuat gambar kop");
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Gagal mengubah gambar ke data URL"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function loadKopDataUrl(origin: string) {
+  try {
+    return await loadImageAsDataUrl(`${origin}/kop-surat.png`);
+  } catch {
+    try {
+      return await loadImageAsDataUrl(`${origin}/kop-surat.jpg`);
+    } catch {
+      return null;
+    }
+  }
 }
