@@ -28,6 +28,13 @@ export function BannerManager({ items }: { items: Banner[] }) {
     setOpen(true);
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(URL.createObjectURL(file));
+    }
+  }
+
   return (
     <div>
       <div className="mb-4 flex justify-start sm:justify-end">
@@ -110,16 +117,20 @@ export function BannerManager({ items }: { items: Banner[] }) {
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-ink-soft">
-              URL Gambar Banner
+              Gambar Banner
             </label>
             <input
-              name="image"
-              required
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="https://..."
-              className="input"
+              type="file"
+              name="imageFile"
+              accept="image/png,image/jpeg,image/webp"
+              required={!editing}
+              onChange={handleFileChange}
+              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-pelican-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pelican-700 hover:file:bg-pelican-100"
             />
+            <p className="mt-1 text-[11px] text-ink-faint">
+              Format JPG, PNG, atau WEBP. Maksimal 5 MB.
+              {editing ? " Kosongkan untuk tetap memakai gambar lama." : ""}
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-ink-soft">
             <input

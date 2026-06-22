@@ -30,29 +30,19 @@ export function AdminTransaksiTable({
   subtitle?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState<"ALL" | "NORMAL" | "TEST">("ALL");
   const [kopSrc, setKopSrc] = useState("/kop-surat.png");
   const [kopOk, setKopOk] = useState(true);
-
-  const totalTest = useMemo(
-    () => transactions.filter((t) => isTestTransaction(t)).length,
-    [transactions]
-  );
-  const totalNormal = transactions.length - totalTest;
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return transactions.filter(
       (t) =>
-        (scope === "ALL" ||
-          (scope === "TEST" && isTestTransaction(t)) ||
-          (scope === "NORMAL" && !isTestTransaction(t))) &&
-        ((t.type ?? "").toLowerCase().includes(q) ||
-          (t.notes ?? "").toLowerCase().includes(q) ||
-          (t.createdBy ?? "").toLowerCase().includes(q) ||
-          t.category.toLowerCase().includes(q))
+        (t.type ?? "").toLowerCase().includes(q) ||
+        (t.notes ?? "").toLowerCase().includes(q) ||
+        (t.createdBy ?? "").toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q)
     );
-  }, [transactions, query, scope]);
+  }, [transactions, query]);
 
   function exportCsv() {
     const header = ["Tanggal", "Kategori", "Mutasi", "Jenis", "Catatan", "Petugas", "Nominal"];
@@ -75,36 +65,6 @@ export function AdminTransaksiTable({
     a.download = `transaksi-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  function buildSummaryRows() {
-    const byCategory = new Map<
-      string,
-      { count: number; masuk: number; keluar: number }
-    >();
-
-    for (const row of filtered) {
-      const current = byCategory.get(row.category) ?? {
-        count: 0,
-        masuk: 0,
-        keluar: 0,
-      };
-      current.count += 1;
-      if (row.mutation === "DEBIT") {
-        current.masuk += row.amount;
-      } else {
-        current.keluar += row.amount;
-      }
-      byCategory.set(row.category, current);
-    }
-
-    return Array.from(byCategory.entries())
-      .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
-      .map(([category, value]) => ({
-        category,
-        ...value,
-        net: value.masuk - value.keluar,
-      }));
   }
 
   async function printPdf() {
@@ -245,8 +205,7 @@ export function AdminTransaksiTable({
       },
     });
 
-    // Rekap per kategori
-    const summaryRows = buildSummaryRows();
+    // Rekap total
     autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 6,
       margin: { left: margin, right: margin },
@@ -254,14 +213,7 @@ export function AdminTransaksiTable({
       styles: baseStyles,
       headStyles: { ...headStyles, fillColor: [219, 234, 254] as [number, number, number] },
       head: [["Jenis", "Jumlah Trx", "Masuk", "Keluar", "Net"]],
-      body: summaryRows.map((row) => [
-        row.category,
-        String(row.count),
-        formatRupiah(row.masuk),
-        formatRupiah(row.keluar),
-        formatRupiah(row.net),
-      ]),
-      foot: [
+      body: [
         [
           "TOTAL",
           String(filtered.length),
@@ -270,12 +222,9 @@ export function AdminTransaksiTable({
           formatRupiah(net),
         ],
       ],
-      footStyles: {
+      bodyStyles: {
         fillColor: [243, 244, 246] as [number, number, number],
-        textColor,
         fontStyle: "bold" as const,
-        lineColor,
-        lineWidth: 0.1,
       },
       columnStyles: {
         1: { halign: "center" },
@@ -343,41 +292,6 @@ export function AdminTransaksiTable({
             placeholder="Cari tipe, catatan, petugas..."
             className="input pl-11"
           />
-        </div>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => setScope("ALL")}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-              scope === "ALL"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            Semua ({transactions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setScope("NORMAL")}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-              scope === "NORMAL"
-                ? "bg-pelican-700 text-white"
-                : "bg-pelican-50 text-pelican-700"
-            }`}
-          >
-            Normal ({totalNormal})
-          </button>
-          <button
-            type="button"
-            onClick={() => setScope("TEST")}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
-              scope === "TEST"
-                ? "bg-amber-600 text-white"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            Data Test ({totalTest})
-          </button>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 print:hidden">
           <button

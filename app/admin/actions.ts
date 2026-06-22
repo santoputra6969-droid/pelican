@@ -724,19 +724,44 @@ export async function deleteInformation(formData: FormData): Promise<ActionResul
 
 /* -------------------------------- Banner -------------------------------- */
 
+function parseStoredBannerId(image: string | null | undefined) {
+  const match = (image ?? "").match(/^\/api\/banner\/(.+)$/);
+  return match ? match[1] : null;
+}
+
 export async function saveBanner(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
-  const image = String(formData.get("image") ?? "").trim();
   const active = formData.get("active") === "on";
-  if (!image) return { ok: false, message: "URL gambar wajib diisi." };
+
+  const upload = await saveUploadedFile(formData.get("imageFile"), {
+    kind: "banner",
+    createdBy: admin.username,
+  });
+  if (upload && !upload.ok) {
+    return { ok: false, message: upload.message };
+  }
 
   if (id) {
+    const existing = await prisma.banner.findUnique({ where: { id } });
+    if (!existing) return { ok: false, message: "Banner tidak ditemukan." };
+
+    let image = existing.image;
+    if (upload?.ok) {
+      image = `/api/banner/${upload.id}`;
+      const oldStoredId = parseStoredBannerId(existing.image);
+      if (oldStoredId) await deleteStoredFile(oldStoredId);
+    }
+
     await prisma.banner.update({
       where: { id },
       data: { image, active },
     });
   } else {
+    if (!upload?.ok) {
+      return { ok: false, message: "Gambar banner wajib diunggah." };
+    }
+    const image = `/api/banner/${upload.id}`;
     const count = await prisma.banner.count();
     await prisma.banner.create({
       data: { image, active, order: count + 1, createdBy: admin.username },
@@ -750,7 +775,14 @@ export async function saveBanner(formData: FormData): Promise<ActionResult> {
 export async function deleteBanner(formData: FormData): Promise<ActionResult> {
   await requireAdmin();
   const id = Number(formData.get("id") ?? 0);
-  if (id) await prisma.banner.delete({ where: { id } });
+  if (id) {
+    const existing = await prisma.banner.findUnique({ where: { id } });
+    if (existing) {
+      const storedId = parseStoredBannerId(existing.image);
+      if (storedId) await deleteStoredFile(storedId);
+      await prisma.banner.delete({ where: { id } });
+    }
+  }
   revalidatePath("/admin/banner");
   revalidatePath("/");
   return { ok: true, message: "Banner dihapus." };
