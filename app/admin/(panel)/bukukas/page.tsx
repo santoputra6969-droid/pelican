@@ -5,6 +5,15 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+const IPL_PERIOD_RE = /untuk bulan\s+(\d{1,2})\s+dan tahun\s+(\d{4})/i;
+
+function iplForPeriodIndex(notes: string | null): number | null {
+  if (!notes) return null;
+  const m = notes.match(IPL_PERIOD_RE);
+  if (!m) return null;
+  return Number(m[2]) * 12 + Number(m[1]);
+}
+
 export default async function AdminBukuKasPage({
   searchParams,
 }: {
@@ -18,26 +27,27 @@ export default async function AdminBukuKasPage({
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 1);
 
-  const [opening, txs] = await Promise.all([
-    // saldo awal = total mutasi sebelum periode
-    prisma.transaction.findMany({
-      where: { status: "POSTED", createdAt: { lt: start } },
-      select: { amount: true, mutation: true },
-    }),
-    prisma.transaction.findMany({
-      where: { status: "POSTED", createdAt: { gte: start, lt: end } },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const txs = await prisma.transaction.findMany({
+    where: { status: "POSTED", createdAt: { gte: start, lt: end } },
+    orderBy: { createdAt: "asc" },
+  });
 
-  const saldoAwal = opening.reduce(
-    (s, t) => s + (t.mutation === "DEBIT" ? t.amount : -t.amount),
-    0
-  );
-  const totalMasuk = txs
+  // Buku Kas hanya mencatat pemasukan IPL yang dibayar TEPAT WAKTU atau DULUAN.
+  // Pembayaran IPL yang TELAT (untuk bulan yang sudah lewat) dikecualikan dari
+  // buku kas (tetap tercatat penuh di Laporan Keuangan). Aturan ini khusus IPL;
+  // KAS, PKK, dan semua pengeluaran tetap dicatat berdasarkan tanggal transaksi.
+  const currentIdx = year * 12 + month;
+  const filteredTxs = txs.filter((t) => {
+    if ((t.type ?? "").trim().toUpperCase() !== "IPL") return true;
+    const forIdx = iplForPeriodIndex(t.notes);
+    if (forIdx === null) return true; // entri IPL manual tanpa periode → tetap dihitung
+    return forIdx >= currentIdx; // tepat waktu / duluan → masuk; telat → dikecualikan
+  });
+
+  const totalMasuk = filteredTxs
     .filter((t) => t.mutation === "DEBIT")
     .reduce((s, t) => s + t.amount, 0);
-  const totalKeluar = txs
+  const totalKeluar = filteredTxs
     .filter((t) => t.mutation !== "DEBIT")
     .reduce((s, t) => s + t.amount, 0);
 
@@ -48,17 +58,16 @@ export default async function AdminBukuKasPage({
       <div className="print:hidden">
         <AdminPageHeader
           title="Buku Kas"
-          subtitle="Laporan kas bulanan — saldo awal, pemasukan, pengeluaran"
+          subtitle="Pemasukan IPL tepat waktu/duluan vs pengeluaran — surplus atau minus bulan ini"
         />
       </div>
       <BukuKasReport
         year={year}
         month={month}
-        saldoAwal={saldoAwal}
         totalMasuk={totalMasuk}
         totalKeluar={totalKeluar}
         legacyBukuKas={legacyBukuKas}
-        rows={txs.map((t) => ({
+        rows={filteredTxs.map((t) => ({
           id: t.id,
           createdAt: t.createdAt.toISOString(),
           category: t.category,

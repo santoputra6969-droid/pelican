@@ -36,7 +36,6 @@ type DetailItem = {
 export function BukuKasReport({
   year,
   month,
-  saldoAwal,
   totalMasuk,
   totalKeluar,
   legacyBukuKas,
@@ -44,7 +43,6 @@ export function BukuKasReport({
 }: {
   year: number;
   month: number;
-  saldoAwal: number;
   totalMasuk: number;
   totalKeluar: number;
   legacyBukuKas?: {
@@ -75,7 +73,6 @@ export function BukuKasReport({
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
   const effectiveMasuk = legacyBukuKas?.totals.masuk ?? totalMasuk;
   const effectiveKeluar = legacyBukuKas?.totals.keluar ?? totalKeluar;
-  const saldoAkhir = saldoAwal + effectiveMasuk - effectiveKeluar;
 
   async function printPdf() {
     if (typeof window === "undefined") return;
@@ -319,11 +316,12 @@ export function BukuKasReport({
       ].join(";");
     });
 
+    const surplus = effectiveMasuk - effectiveKeluar;
     const summary = [
       "",
-      `Saldo Awal;;;;${saldoAwal};`,
-      `Total;;;;${effectiveMasuk};${effectiveKeluar}`,
-      `Saldo Akhir;;;;${saldoAkhir};`,
+      `Total Pemasukan (tepat waktu/duluan);;;;${effectiveMasuk};`,
+      `Total Pengeluaran;;;;;${effectiveKeluar}`,
+      `${surplus >= 0 ? "SURPLUS" : "MINUS"};;;;${surplus};`,
     ];
 
     const csv = [header.join(";"), ...lines, ...summary].join("\n");
@@ -475,7 +473,14 @@ export function BukuKasReport({
         </div>
       </div>
 
-      <h2 className="mb-3 text-2xl font-bold text-ink">Buku Kas Bulan {formatPeriod(year, month)}</h2>
+      <h2 className="mb-2 text-2xl font-bold text-ink">Buku Kas Bulan {formatPeriod(year, month)}</h2>
+
+      <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 print:hidden">
+        Buku Kas hanya mencatat pemasukan IPL yang dibayar <b>tepat waktu</b> atau{" "}
+        <b>duluan</b>. Pembayaran IPL yang <b>telat</b> tidak dihitung di sini (tetap
+        tercatat penuh di Laporan Keuangan). KAS, PKK, dan pengeluaran dicatat normal
+        sesuai tanggal.
+      </p>
 
       <div className="mb-4 grid grid-cols-2 border-b border-black/10">
         <button
@@ -563,19 +568,12 @@ export function BukuKasReport({
             tone="red"
           />
           <TotalCard
-            title="Saldo Bersih Bulan Ini"
+            title={report.totals.net >= 0 ? "Surplus Bulan Ini" : "Minus Bulan Ini"}
             total={report.totals.net}
             subA={{ label: "UTAMA", value: report.totals.masukUtama - report.totals.keluarUtama }}
             subB={{ label: "PKK", value: report.totals.masukPkk - report.totals.keluarPkk }}
             tone="net"
           />
-
-          <div className="card hidden p-4 print:block">
-            <p className="text-xs text-ink-faint">Saldo Awal</p>
-            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(saldoAwal)}</p>
-            <p className="mt-2 text-xs text-ink-faint">Saldo Akhir</p>
-            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(saldoAkhir)}</p>
-          </div>
         </div>
       ) : (
         <div>
