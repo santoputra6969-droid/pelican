@@ -16,7 +16,7 @@ export const mainMenu: MenuItem[] = [
   { id: "m4", label: "Daftar Transaksi", icon: "receipt", href: "/transaksi", accent: "#8b5cf6" },
   { id: "m5", label: "Pengkinian Data", icon: "user-edit", href: "/resident/form", accent: "#0ea5e9" },
   { id: "m6", label: "Informasi", icon: "megaphone", href: "/informasi", accent: "#0891b2" },
-  { id: "m7", label: "Profil Rumah", icon: "user-edit", href: "/profil", accent: "#f59e0b" },
+  { id: "m7", label: "IPL Takeover", icon: "history", href: "/ipl-takeover", accent: "#f59e0b" },
   { id: "m8", label: "Ajukan Surat", icon: "receipt", href: "/surat", accent: "#0ea5e9" },
   { id: "m9", label: "Lapor Warga", icon: "megaphone", href: "/pengaduan", accent: "#f97316" },
   { id: "m10", label: "Voting Warga", icon: "check", href: "/vote", accent: "#ec4899" },
